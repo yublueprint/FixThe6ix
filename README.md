@@ -15,7 +15,6 @@ This project delivers a mobile-friendly web dashboard where volunteers can enter
 | **Donations Log** | Track total donations given out by count, dollar value, date, and volunteer |
 | **Bulk Import** | CSV upload to migrate the existing spreadsheet in one shot |
 | **Admin Panel** | Manage stores, users, and data — edit and delete with role-based access |
-| **Mobile-First** | Built for volunteers in the field on their phones |
 
 ---
 
