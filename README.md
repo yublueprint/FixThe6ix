@@ -1,13 +1,25 @@
 # FixThe6ix
 
-The WNH ReGiftcard Program currently tracks ~50+ store brands across 15+ spreadsheet tabs with hundreds of gift cards catalogued by last-4-digits, remaining balance, and redemption status. This manual process is error-prone, hard to audit, and inaccessible for volunteers working in the field.
+Overview
+The WNH ReGiftcard Program tracks 50+ store brands and hundreds of individual gift cards — catalogued by last-4-digits, remaining balance, and redemption status. The current manual spreadsheet process is error-prone, hard to audit, and inaccessible for volunteers in the field.
+This project delivers a mobile-friendly web dashboard where volunteers can enter gift cards, track spending, view real-time store totals, and monitor donation distribution metrics.
 
-This project delivers a web-based dashboard that replaces the spreadsheet with a purpose-built application. Volunteers can input gift cards, track spending, view real-time totals per store, and see donation distribution metrics — all from a clean, mobile-friendly interface.
+Key Features
 
-Key Goals:
-• Replace complex multi-tab spreadsheet with intuitive web dashboard
-• Enable gift card entry: store type, last 4 digits, dollar amount
-• Real-time per-store tallies on a main overview page
-• Dedicated spending/redemption tracking page
-• Track total donations given out (count & dollar value)
-• Mobile-friendly for volunteers in the field
+Replace complex multi-tab spreadsheet with an intuitive web dashboard
+Gift card entry: store type, last 4 digits, dollar amount
+Real-time per-store tallies on a main overview page
+Dedicated spending and redemption tracking page
+Track total donations given out (count & dollar value)
+Mobile-friendly for volunteers in the field
+CSV bulk import for migrating existing spreadsheet data
+Admin panel for user and data management
+
+Architecture
+Browser (Next.js SSR + React)
+        ↓
+Next.js API Routes
+        ↓
+Prisma ORM → PostgreSQL
+
+Vercel (Hosting) ← GitHub (Repo) ← GitHub Actions (CI) → Preview Deploys
