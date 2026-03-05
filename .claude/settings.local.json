@@ -10,7 +10,11 @@
       "Bash(git stash push:*)",
       "mcp__plugin_figma_figma-desktop__get_design_context",
       "mcp__plugin_figma_figma-desktop__get_screenshot",
-      "mcp__plugin_figma_figma-desktop__get_metadata"
+      "mcp__plugin_figma_figma-desktop__get_metadata",
+      "Bash(pnpm add:*)",
+      "Bash(node:*)",
+      "Bash(npm install:*)",
+      "Bash(npx prisma:*)"
     ]
   }
 }
