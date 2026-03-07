@@ -32,9 +32,9 @@ export default function LandingPage() {
           <a href="https://fixthe6ix.ca/contact-4/" target="_blank" rel="noopener noreferrer" className="h-10 px-5 rounded-[6px] border border-[#E2E8F0] bg-white text-[14px] font-semibold text-[#0A0A0A] hover:bg-[#F8FAFC] transition-colors flex items-center justify-center">
             Contact Us
           </a>
-          <button className="h-10 px-5 rounded-[6px] bg-[#2E90FA] text-white text-[14px] font-semibold hover:bg-[#1C7FE6] transition-colors">
+          <Link href="/redemption" className="h-10 px-5 rounded-[6px] bg-[#2E90FA] text-white text-[14px] font-semibold hover:bg-[#1C7FE6] transition-colors flex items-center justify-center no-underline">
             Admin Login
-          </button>
+          </Link>
         </div>
       </nav>
 
@@ -60,10 +60,10 @@ export default function LandingPage() {
           </p>
 
           <div className="flex flex-col sm:flex-row gap-4 mt-4">
-            <button className="h-[46px] px-6 rounded-[8px] bg-[#3182F6] text-white text-[15px] font-semibold hover:bg-[#2072E8] transition-all flex items-center justify-center gap-2 shadow-[0_4px_14px_0_rgba(49,130,246,0.25)]">
+            <Link href="/redemption" className="h-[46px] px-6 rounded-[8px] bg-[#3182F6] text-white text-[15px] font-semibold hover:bg-[#2072E8] transition-all flex items-center justify-center gap-2 shadow-[0_4px_14px_0_rgba(49,130,246,0.25)] no-underline">
               <HugeiconsIcon icon={Login01Icon} strokeWidth={2.5} className="size-5" />
               Admin Login
-            </button>
+            </Link>
             <a href="https://fixthe6ix.ca/contact-4/" target="_blank" rel="noopener noreferrer" className="h-[46px] px-6 rounded-[8px] bg-white border border-[#E2E8F0] text-[#0B1527] text-[15px] font-medium hover:bg-[#F8FAFC] hover:border-[#CBD5E1] transition-all flex items-center justify-center gap-2 shadow-[0_2px_8px_0_rgba(0,0,0,0.02)] no-underline">
               <HugeiconsIcon icon={Mail01Icon} strokeWidth={2.5} className="size-5" />
               Contact Support
