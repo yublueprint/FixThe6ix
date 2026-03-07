@@ -16,64 +16,62 @@ export default function LandingPage() {
       <nav className="h-20 bg-white flex items-center justify-between px-8 lg:px-16 border-b border-[#E2E8F0]">
         <div className="flex items-center gap-2">
           {/* Logo */}
-          <div className="flex flex-col text-left">
-            <span className="font-extrabold text-[15px] text-[#0A0A0A] leading-none tracking-tight">FIX THE SIX</span>
-            <span className="font-extrabold text-[15px] text-[#0A0A0A] leading-none tracking-tight mt-0.5">LOGO HERE</span>
-          </div>
+          <img src="/fixthesixlogo.png" alt="FixThe6ix Logo" className="h-12" />
         </div>
 
         <div className="hidden md:flex items-center gap-10">
-          <Link href="#" className="text-[14px] font-semibold text-[#525252] hover:text-[#0A0A0A] transition-colors">Program Overview</Link>
-          <Link href="#" className="text-[14px] font-semibold text-[#525252] hover:text-[#0A0A0A] transition-colors">Documentation</Link>
-          <Link href="#" className="text-[14px] font-semibold text-[#525252] hover:text-[#0A0A0A] transition-colors">Help Center</Link>
+          <Link href="https://fixthe6ix.ca/about-us/" className="text-[14px] font-semibold text-[#525252] hover:text-[#0A0A0A] transition-colors">About Us</Link>
+          <Link href="https://fixthe6ix.ca/regiftcard-program/" className="text-[14px] font-semibold text-[#525252] hover:text-[#0A0A0A] transition-colors">Impact</Link>
+          <Link href="https://fixthe6ix.ca/volunteer-ft6/" className="text-[14px] font-semibold text-[#525252] hover:text-[#0A0A0A] transition-colors">Get Involved</Link>
+          <Link href="https://fixthe6ix.ca/blog/" className="text-[14px] font-semibold text-[#525252] hover:text-[#0A0A0A] transition-colors">Blog</Link>
         </div>
 
         <div className="flex items-center gap-3">
           <a href="https://fixthe6ix.ca/contact-4/" target="_blank" rel="noopener noreferrer" className="h-10 px-5 rounded-[6px] border border-[#E2E8F0] bg-white text-[14px] font-semibold text-[#0A0A0A] hover:bg-[#F8FAFC] transition-colors flex items-center justify-center">
             Contact Us
           </a>
-          <Link href="/redemption" className="h-10 px-5 rounded-[6px] bg-[#2E90FA] text-white text-[14px] font-semibold hover:bg-[#1C7FE6] transition-colors flex items-center justify-center no-underline">
+          <Link href="/dashboard" className="h-10 px-5 rounded-[6px] bg-[#2E90FA] text-white text-[14px] font-semibold hover:bg-[#1C7FE6] transition-colors flex items-center justify-center no-underline">
             Admin Login
           </Link>
         </div>
       </nav>
 
       {/* Hero Section */}
-      <main className="flex-1 flex flex-col lg:flex-row items-center justify-center gap-16 lg:gap-32 px-8 lg:px-24 py-16 lg:py-0 overflow-hidden relative">
+      <main className="flex-1 flex flex-col lg:flex-row items-center justify-center gap-16 lg:gap-32 px-8 lg:px-24 py-20 lg:py-55 overflow-hidden relative">
         {/* Soft background glow */}
-        <div className="absolute left-1/3 top-1/2 -translate-y-1/2 w-[600px] h-[600px] bg-[#E0F2FE] rounded-full blur-[100px] opacity-60 pointer-events-none" />
+        <div className="absolute left-1/9 top-1/2 -translate-y-1/2 w-[900px] h-[700px] rounded-full blur-[100px] pointer-events-none" style={{ background: 'radial-gradient(circle, rgba(219,219,52,0.15) 0%, rgba(30,138,211,0.25) 100%)' }} />
 
-        <div className="w-full lg:w-1/2 max-w-[500px] flex flex-col gap-6 relative z-10">
+        <div className="w-full lg:w-1/2 max-w-[500px] flex flex-col gap-6 relative z-10 lg:-translate-y-20">
           {/* Badge */}
-          <div className="inline-flex items-center gap-2 bg-[#E1F3FE] rounded-full px-3 py-1.5 w-fit border border-[#BEE5FE]">
-            <div className="size-2 rounded-full bg-[#1AA1F5]" />
-            <span className="text-[10px] font-bold text-[#1AA1F5] tracking-widest uppercase">Admin Gateway</span>
+          <div className="inline-flex items-center gap-2 bg-[#E1F3FE] rounded-full px-4 py-2 w-fit border border-[#BEE5FE]">
+            <div className="size-2.5 rounded-full bg-[#1AA1F5]" />
+            <span className="text-[11px] font-bold text-[#1AA1F5] tracking-widest uppercase">Admin Gateway</span>
           </div>
 
-          <h1 className="text-[56px] lg:text-[72px] font-black text-[#0B1527] leading-[1.05] tracking-[-0.03em] mt-2">
+          <h1 className="text-[64px] lg:text-[84px] font-black text-[#0B1527] leading-[1.05] tracking-[-0.03em] mt-2">
             Welcome,<br />
-            <span className="text-[#3BB4F6]">Admin.</span>
+            <span className="text-[#3182F6]">Admin.</span>
           </h1>
 
-          <p className="text-[17px] text-[#556987] leading-[1.6] max-w-[420px] font-medium mt-1">
+          <p className="text-[18px] text-[#556987] leading-[1.6] max-w-[420px] font-medium mt-1">
             Please log in to manage the gift card program. FixThe6ix provides the tools you need to track donations and support the community efficiently.
           </p>
 
           <div className="flex flex-col sm:flex-row gap-4 mt-4">
-            <Link href="/redemption" className="h-[46px] px-6 rounded-[8px] bg-[#3182F6] text-white text-[15px] font-semibold hover:bg-[#2072E8] transition-all flex items-center justify-center gap-2 shadow-[0_4px_14px_0_rgba(49,130,246,0.25)] no-underline">
+            <Link href="/dashboard" className="h-[52px] px-8 rounded-[8px] bg-[#3182F6] text-white text-[16px] font-semibold hover:bg-[#2072E8] transition-all flex items-center justify-center gap-2 shadow-[0_4px_14px_0_rgba(49,130,246,0.25)] no-underline">
               <HugeiconsIcon icon={Login01Icon} strokeWidth={2.5} className="size-5" />
               Admin Login
             </Link>
-            <a href="https://fixthe6ix.ca/contact-4/" target="_blank" rel="noopener noreferrer" className="h-[46px] px-6 rounded-[8px] bg-white border border-[#E2E8F0] text-[#0B1527] text-[15px] font-medium hover:bg-[#F8FAFC] hover:border-[#CBD5E1] transition-all flex items-center justify-center gap-2 shadow-[0_2px_8px_0_rgba(0,0,0,0.02)] no-underline">
+            <a href="https://fixthe6ix.ca/contact-4/" target="_blank" rel="noopener noreferrer" className="h-[52px] px-8 rounded-[8px] bg-white border border-[#E2E8F0] text-[#0B1527] text-[16px] font-medium hover:bg-[#F8FAFC] hover:border-[#CBD5E1] transition-all flex items-center justify-center gap-2 shadow-[0_2px_8px_0_rgba(0,0,0,0.02)] no-underline">
               <HugeiconsIcon icon={Mail01Icon} strokeWidth={2.5} className="size-5" />
               Contact Support
             </a>
           </div>
         </div>
 
-        <div className="w-full lg:w-[600px] relative z-10 flex justify-center lg:justify-end">
+        <div className="w-full lg:w-[600px] relative z-10 hidden lg:flex justify-center lg:justify-end lg:-translate-y-10">
           {/* Dashboard abstract illustration */}
-          <div className="w-full max-w-[580px] aspect-[4/3] bg-[#0F172A] rounded-[24px] shadow-2xl overflow-hidden border border-[#334155] p-6 flex flex-col gap-4">
+          <div className="w-full max-w-[520px] aspect-[4/3] bg-[#0F172A] rounded-[24px] shadow-2xl overflow-hidden border border-[#334155] p-6 flex flex-col gap-4" style={{ boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.25), 0 0 0 1px rgba(56, 189, 248, 0.1), 0 0 40px rgba(56, 189, 248, 0.15)' }}>
             {/* Header */}
             <div className="flex items-center gap-4">
               <div className="size-8 rounded-[8px] bg-[#1E293B] border border-[#334155] flex items-center justify-center">
@@ -196,24 +194,24 @@ export default function LandingPage() {
       <footer className="bg-white border-t border-[#E2E8F0] py-8 px-8 lg:px-24 flex flex-col md:flex-row items-center justify-between gap-6">
         <div className="flex flex-col gap-2 relative z-10">
           <div className="flex items-center gap-2">
-            <div className="bg-[#2E90FA] text-white font-black text-[12px] size-5 rounded-[4px] flex items-center justify-center">
-              <span className="text-[10px]">&lt;/&gt;</span>
-            </div>
-            <span className="font-black text-[15px] text-[#0A0A0A] tracking-wider">FIXTHE6IX</span>
+            <img src="/fixthesixlogo.png" alt="FixThe6ix Logo" className="h-12" />
           </div>
           <p className="text-[12px] text-[#737373]">
-            Empowering communities through gift card redistribution.
+            We are united around a shared vision for a better Toronto.
           </p>
         </div>
 
         <div className="flex items-center gap-8">
-          <Link href="#" className="text-[13px] font-medium text-[#737373] hover:text-[#0A0A0A] transition-colors">Privacy Policy</Link>
-          <Link href="#" className="text-[13px] font-medium text-[#737373] hover:text-[#0A0A0A] transition-colors">Terms of Service</Link>
-          <Link href="#" className="text-[13px] font-medium text-[#737373] hover:text-[#0A0A0A] transition-colors">Internal Wiki</Link>
+          <Link href="https://fixthe6ix.ca/about-us/" className="text-[13px] font-medium text-[#737373] hover:text-[#0A0A0A] transition-colors">About Us</Link>
+          <Link href="https://fixthe6ix.ca/regiftcard-program/" className="text-[13px] font-medium text-[#737373] hover:text-[#0A0A0A] transition-colors">Impact</Link>
+          <Link href="https://fixthe6ix.ca/volunteer-ft6/" className="text-[13px] font-medium text-[#737373] hover:text-[#0A0A0A] transition-colors">Get Involved</Link>
+          <Link href="https://fixthe6ix.ca/blog/" className="text-[13px] font-medium text-[#737373] hover:text-[#0A0A0A] transition-colors">Blog</Link>
+          <Link href="https://fixthe6ix.ca/contact-4/" className="text-[13px] font-medium text-[#737373] hover:text-[#0A0A0A] transition-colors">Contact Us</Link>
         </div>
+        
 
         <p className="text-[13px] text-[#737373] text-right">
-          &copy; 2024 FixThe6ix. Admin Portal v2.4.0
+          &copy; 2024 FixThe6ix. Admin Portal 
         </p>
       </footer>
     </div>
