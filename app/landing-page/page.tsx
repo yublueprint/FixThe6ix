@@ -211,7 +211,7 @@ export default function LandingPage() {
         
 
         <p className="text-[13px] text-[#737373] text-right">
-          &copy; 2024 FixThe6ix. Admin Portal 
+          &copy; 2026 FixThe6ix. Admin Portal 
         </p>
       </footer>
     </div>
