@@ -14,7 +14,8 @@
       "Bash(pnpm add:*)",
       "Bash(node:*)",
       "Bash(npm install:*)",
-      "Bash(npx prisma:*)"
+      "Bash(npx prisma:*)",
+      "mcp__ide__getDiagnostics"
     ]
   }
 }
