@@ -12,7 +12,7 @@ const storeSchema = z.object({
 })
 
 // get api validation, both values are optional
-const getStores = (name: string | null, category: string | null) => {
+export const getStores = (name: string | null, category: string | null) => {
 
     // validate schema if both filled in
     const resultWithBoth = storeSchema.safeParse({name: name, category: category});
@@ -32,7 +32,7 @@ const getStores = (name: string | null, category: string | null) => {
 }
 
 // post api validation
-const postStore = (name: string, category: string, logoUrl: string | null) => {
+export const postStore = (name: string, category: string, logoUrl: string | null) => {
     var result;
     
     // if logoUrl passed
