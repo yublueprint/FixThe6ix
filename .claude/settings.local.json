@@ -1,0 +1,16 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(git add:*)",
+      "Bash(git commit:*)",
+      "Bash(git push:*)",
+      "Bash(npx tsc:*)",
+      "Bash(git pull:*)",
+      "Bash(git fetch:*)",
+      "Bash(git stash push:*)",
+      "mcp__plugin_figma_figma-desktop__get_design_context",
+      "mcp__plugin_figma_figma-desktop__get_screenshot",
+      "mcp__plugin_figma_figma-desktop__get_metadata"
+    ]
+  }
+}

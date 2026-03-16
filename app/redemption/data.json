@@ -1,0 +1,35 @@
+{
+  "cards": [
+    { "id": 1, "store": "Walmart", "last4": "1234", "initialBalance": 100, "remainingBalance": 64.50, "status": "Active", "addedDate": "2024-01-10", "addedBy": "Sarah Johnson" },
+    { "id": 2, "store": "Walmart", "last4": "5678", "initialBalance": 50, "remainingBalance": 50, "status": "Active", "addedDate": "2024-01-12", "addedBy": "Mike Davis" },
+    { "id": 3, "store": "Target", "last4": "2345", "initialBalance": 75, "remainingBalance": 0, "status": "Used", "addedDate": "2024-01-05", "addedBy": "Sarah Johnson" },
+    { "id": 4, "store": "Target", "last4": "6789", "initialBalance": 50, "remainingBalance": 50, "status": "Active", "addedDate": "2024-02-01", "addedBy": "Lisa Chen" },
+    { "id": 5, "store": "McDonald's", "last4": "3456", "initialBalance": 25, "remainingBalance": 10, "status": "Active", "addedDate": "2024-01-20", "addedBy": "Mike Davis" },
+    { "id": 6, "store": "McDonald's", "last4": "7890", "initialBalance": 25, "remainingBalance": 25, "status": "Active", "addedDate": "2024-02-05", "addedBy": "Sarah Johnson" },
+    { "id": 7, "store": "Starbucks", "last4": "4567", "initialBalance": 40, "remainingBalance": 15.75, "status": "Active", "addedDate": "2024-01-15", "addedBy": "Lisa Chen" },
+    { "id": 8, "store": "Starbucks", "last4": "8901", "initialBalance": 40, "remainingBalance": 0, "status": "Donated", "addedDate": "2024-01-08", "addedBy": "Mike Davis" },
+    { "id": 9, "store": "Amazon", "last4": "5679", "initialBalance": 200, "remainingBalance": 145.99, "status": "Active", "addedDate": "2024-02-10", "addedBy": "Sarah Johnson" },
+    { "id": 10, "store": "Kroger", "last4": "1122", "initialBalance": 150, "remainingBalance": 87.30, "status": "Active", "addedDate": "2024-01-25", "addedBy": "Lisa Chen" },
+    { "id": 11, "store": "Kroger", "last4": "3344", "initialBalance": 100, "remainingBalance": 0, "status": "Used", "addedDate": "2024-01-03", "addedBy": "Mike Davis" },
+    { "id": 12, "store": "Chipotle", "last4": "5566", "initialBalance": 30, "remainingBalance": 30, "status": "Active", "addedDate": "2024-02-08", "addedBy": "Sarah Johnson" },
+    { "id": 13, "store": "Subway", "last4": "7788", "initialBalance": 20, "remainingBalance": 8.50, "status": "Active", "addedDate": "2024-01-18", "addedBy": "Lisa Chen" },
+    { "id": 14, "store": "CVS Pharmacy", "last4": "9900", "initialBalance": 60, "remainingBalance": 60, "status": "Active", "addedDate": "2024-02-12", "addedBy": "Mike Davis" },
+    { "id": 15, "store": "Costco", "last4": "1357", "initialBalance": 250, "remainingBalance": 175.50, "status": "Active", "addedDate": "2024-01-30", "addedBy": "Sarah Johnson" }
+  ],
+  "transactions": [
+    { "id": 1, "cardId": 1, "date": "2024-01-15T10:30:00", "type": "spend", "amount": 22.50, "volunteer": "Sarah Johnson", "recipient": null, "notes": "Family A groceries" },
+    { "id": 2, "cardId": 1, "date": "2024-01-22T14:00:00", "type": "spend", "amount": 13.00, "volunteer": "Mike Davis", "recipient": null, "notes": "Household items" },
+    { "id": 3, "cardId": 3, "date": "2024-01-10T09:00:00", "type": "spend", "amount": 40.00, "volunteer": "Sarah Johnson", "recipient": null, "notes": "Clothing for kids" },
+    { "id": 4, "cardId": 3, "date": "2024-01-18T11:30:00", "type": "donation", "amount": 35.00, "volunteer": "Lisa Chen", "recipient": "Family B", "notes": "Full remaining balance donated" },
+    { "id": 5, "cardId": 5, "date": "2024-01-25T13:00:00", "type": "spend", "amount": 15.00, "volunteer": "Mike Davis", "recipient": null, "notes": "Lunch for family" },
+    { "id": 6, "cardId": 7, "date": "2024-01-20T08:30:00", "type": "spend", "amount": 12.25, "volunteer": "Lisa Chen", "recipient": null, "notes": "Morning coffee run" },
+    { "id": 7, "cardId": 7, "date": "2024-02-02T09:15:00", "type": "spend", "amount": 12.00, "volunteer": "Sarah Johnson", "recipient": null, "notes": "" },
+    { "id": 8, "cardId": 8, "date": "2024-01-15T16:00:00", "type": "donation", "amount": 40.00, "volunteer": "Mike Davis", "recipient": "Family C", "notes": "Full card donated" },
+    { "id": 9, "cardId": 9, "date": "2024-02-14T12:00:00", "type": "spend", "amount": 54.01, "volunteer": "Sarah Johnson", "recipient": null, "notes": "Online order supplies" },
+    { "id": 10, "cardId": 10, "date": "2024-02-01T15:30:00", "type": "spend", "amount": 62.70, "volunteer": "Lisa Chen", "recipient": null, "notes": "Weekly groceries" },
+    { "id": 11, "cardId": 11, "date": "2024-01-08T10:00:00", "type": "spend", "amount": 55.00, "volunteer": "Mike Davis", "recipient": null, "notes": "Groceries" },
+    { "id": 12, "cardId": 11, "date": "2024-01-20T14:30:00", "type": "spend", "amount": 45.00, "volunteer": "Sarah Johnson", "recipient": null, "notes": "Remaining balance used" },
+    { "id": 13, "cardId": 13, "date": "2024-01-25T12:00:00", "type": "spend", "amount": 11.50, "volunteer": "Lisa Chen", "recipient": null, "notes": "Lunch" },
+    { "id": 14, "cardId": 15, "date": "2024-02-05T11:00:00", "type": "spend", "amount": 74.50, "volunteer": "Sarah Johnson", "recipient": null, "notes": "Bulk groceries for event" }
+  ]
+}
