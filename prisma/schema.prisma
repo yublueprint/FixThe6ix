@@ -1,0 +1,76 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum StoreCategory {
+  FAST_FOOD
+  GROCERY
+  CLOTHING
+  RESTAURANT
+  PHARMACY
+  ELECTRONICS
+  HOME_GOODS
+  ONLINE
+  OTHER
+}
+
+enum GiftCardStatus {
+  ACTIVE
+  PARTIALLY_REDEEMED
+  FULLY_REDEEMED
+  DONATED
+}
+
+enum TransactionType {
+  SPEND
+  DONATION_OUT
+}
+
+enum UserRole {
+  ADMIN
+  VOLUNTEER
+}
+
+model Store {
+  id        String        @id @default(uuid())
+  name      String        @unique
+  category  StoreCategory
+  logoUrl   String?
+  giftCards GiftCard[]
+}
+
+model GiftCard {
+  id              String         @id @default(uuid())
+  storeId         String
+  store           Store          @relation(fields: [storeId], references: [id])
+  lastFourDigits  String         @db.VarChar(4)
+  initialAmount   Decimal        @db.Decimal(10, 2)
+  remainingAmount Decimal        @db.Decimal(10, 2)
+  status          GiftCardStatus
+  notes           String?
+  createdAt       DateTime       @default(now())
+  transactions    Transaction[]
+
+  @@unique([storeId, lastFourDigits])
+}
+
+model Transaction {
+  id            String          @id @default(uuid())
+  giftCardId    String
+  giftCard      GiftCard        @relation(fields: [giftCardId], references: [id])
+  amount        Decimal         @db.Decimal(10, 2)
+  type          TransactionType
+  recipientName String?
+  volunteerName String?
+  createdAt     DateTime        @default(now())
+}
+
+model User {
+  id   String   @id @default(uuid())
+  role UserRole
+}
