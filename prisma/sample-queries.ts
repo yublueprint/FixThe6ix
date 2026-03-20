@@ -108,30 +108,30 @@ export async function recordSpend(
   volunteerName: string,
   recipientName?: string,
 ) {
-  const [transaction, card] = await prisma.$transaction([
-    prisma.transaction.create({
+  return prisma.$transaction(async (tx) => {
+    const transaction = await tx.transaction.create({
       data: { giftCardId, amount, type: "SPEND", volunteerName, recipientName },
-    }),
-    prisma.giftCard.update({
+    });
+
+    const updatedCard = await tx.giftCard.update({
       where: { id: giftCardId },
       data: {
         remainingAmount: { decrement: amount },
-        // status updated separately after knowing new balance
       },
-    }),
-  ]);
+    });
 
-  // Derive new status
-  const newRemaining = Number(card.remainingAmount) - amount;
-  const newStatus =
-    newRemaining <= 0 ? "FULLY_REDEEMED" : "PARTIALLY_REDEEMED";
+    // Derive new status based on the updated remaining balance
+    const newRemaining = Number(updatedCard.remainingAmount);
+    const newStatus =
+      newRemaining <= 0 ? "FULLY_REDEEMED" : "PARTIALLY_REDEEMED";
 
-  await prisma.giftCard.update({
-    where: { id: giftCardId },
-    data: { status: newStatus },
+    await tx.giftCard.update({
+      where: { id: giftCardId },
+      data: { status: newStatus },
+    });
+
+    return transaction;
   });
-
-  return transaction;
 }
 
 /** Record a donation-out event */
@@ -141,8 +141,8 @@ export async function recordDonation(
   volunteerName: string,
   recipientName: string,
 ) {
-  return prisma.$transaction([
-    prisma.transaction.create({
+  return prisma.$transaction(async (tx) => {
+    const transaction = await tx.transaction.create({
       data: {
         giftCardId,
         amount,
@@ -150,12 +150,15 @@ export async function recordDonation(
         volunteerName,
         recipientName,
       },
-    }),
-    prisma.giftCard.update({
+    });
+
+    await tx.giftCard.update({
       where: { id: giftCardId },
       data: { status: "DONATED", remainingAmount: 0 },
-    }),
-  ]);
+    });
+
+    return transaction;
+  });
 }
 
 // ---------------------------------------------------------------------------

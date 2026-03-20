@@ -224,7 +224,7 @@ export default function HomePage() {
                         data={treemapData}
                         dataKey="size"
                         aspectRatio={16 / 9}
-                        content={<TreemapCell />}
+                        content={(props) => <TreemapCell {...props} />}
                       >
                         <Tooltip
                           content={({ active, payload }) => {

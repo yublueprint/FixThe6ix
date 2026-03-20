@@ -4,6 +4,7 @@ generator client {
 
 datasource db {
   provider = "postgresql"
+  url      = env("DATABASE_URL")
 }
 
 enum StoreCategory {
@@ -54,6 +55,8 @@ model GiftCard {
   notes           String?
   createdAt       DateTime       @default(now())
   transactions    Transaction[]
+
+  @@unique([storeId, lastFourDigits])
 }
 
 model Transaction {
