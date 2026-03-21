@@ -43,10 +43,10 @@ export default function LandingPage() {
 
         <div className="w-full lg:w-1/2 max-w-[500px] flex flex-col gap-6 relative z-10 lg:-translate-y-20">
           {/* Badge */}
-          <div className="inline-flex items-center gap-2 bg-[#E1F3FE] rounded-full px-4 py-2 w-fit border border-[#BEE5FE]">
+          {/* <div className="inline-flex items-center gap-2 bg-[#E1F3FE] rounded-full px-4 py-2 w-fit border border-[#BEE5FE]">
             <div className="size-2.5 rounded-full bg-[#1AA1F5]" />
             <span className="text-[11px] font-bold text-[#1AA1F5] tracking-widest uppercase">Admin Gateway</span>
-          </div>
+          </div> */}
 
           <h1 className="text-[64px] lg:text-[84px] font-black text-[#0B1527] leading-[1.05] tracking-[-0.03em] mt-2">
             Welcome,<br />
@@ -69,9 +69,9 @@ export default function LandingPage() {
           </div>
         </div>
 
-        <div className="w-full lg:w-[600px] relative z-10 hidden lg:flex justify-center lg:justify-end lg:-translate-y-10">
+        <div className="w-full lg:w-[750px] relative z-10 hidden lg:flex justify-center lg:justify-end lg:-translate-y-10">
           {/* Dashboard abstract illustration */}
-          <div className="w-full max-w-[520px] aspect-[4/3] bg-[#0F172A] rounded-[24px] shadow-2xl overflow-hidden border border-[#334155] p-6 flex flex-col gap-4" style={{ boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.25), 0 0 0 1px rgba(56, 189, 248, 0.1), 0 0 40px rgba(56, 189, 248, 0.15)' }}>
+          <div className="w-full max-w-[680px] aspect-[4/3] bg-[#0F172A] rounded-[24px] shadow-2xl overflow-hidden border border-[#334155] p-6 flex flex-col gap-4" style={{ boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.25), 0 0 0 1px rgba(56, 189, 248, 0.1), 0 0 40px rgba(56, 189, 248, 0.15)' }}>
             {/* Header */}
             <div className="flex items-center gap-4">
               <div className="size-8 rounded-[8px] bg-[#1E293B] border border-[#334155] flex items-center justify-center">
