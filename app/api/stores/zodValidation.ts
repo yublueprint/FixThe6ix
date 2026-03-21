@@ -1,29 +1,27 @@
 const { z } = require("zod");
 
-const categoryList = [
-  "FAST_FOOD",
-  "GROCERY",
-  "CLOTHING",
-  "RESTAURANT",
-  "PHARMACY",
-  "ELECTRONICS",
-  "HOME_GOODS",
-  "ONLINE",
-  "OTHER",
-];
-const categoryEnum = z.enum(categoryList)
+const categoryEnum = z.enum([
+  "FAST_FOOD", "GROCERY", "CLOTHING", "RESTAURANT",
+  "PHARMACY", "ELECTRONICS", "HOME_GOODS", "ONLINE", "OTHER",
+]);
 
-const storeSchema = z.object({
-    name: z.string().trim().min(1),
-    category: categoryEnum,
-    logoUrl: z.string().optional()
+// GET ?name=&category= — both optional; empty query = valid
+export const getStoreSchema = z.object({
+  name: z.string().trim().min(1).optional(),
+  category: categoryEnum.optional(),
+});
 
-})
+// POST body — full resource
+export const postStoreSchema = z.object({
+  name: z.string().trim().min(1),
+  category: categoryEnum,
+  logoUrl: z.string().url().optional(), // or z.string().optional() if URLs aren’t strict yet
+});
 
 // get api validation, both values are optional
 export const getStores = (name: string | null, category: string | null) => {
 
-    return storeSchema.safeParse({
+    return getStoreSchema.safeParse({
     name: name ?? undefined,
     category: category ?? undefined,
   });
@@ -34,18 +32,10 @@ export const getStores = (name: string | null, category: string | null) => {
 export const postStore = (name: string, category: string, logoUrl: string | null) => {
     
     // if logoUrl passed
-    const result = storeSchema.safeParse({
+    return postStoreSchema.safeParse({
         name,
         category,
         ...(logoUrl ? { logoUrl } : {}),
     });
 
-
-    // if schema good
-    if(!result.success){
-        console.log(result);
-        return false;
-    }
-
-    return true;
 }
