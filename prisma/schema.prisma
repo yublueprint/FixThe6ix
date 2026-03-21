@@ -54,6 +54,8 @@ model GiftCard {
   notes           String?
   createdAt       DateTime       @default(now())
   transactions    Transaction[]
+
+  @@unique([storeId, lastFourDigits])
 }
 
 model Transaction {

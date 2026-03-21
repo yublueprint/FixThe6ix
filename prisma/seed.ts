@@ -1,7 +1,12 @@
 import { PrismaClient, StoreCategory, GiftCardStatus, TransactionType, UserRole } from "@prisma/client";
 import { PrismaPg } from "@prisma/adapter-pg";
 
-const adapter = new PrismaPg({ connectionString: process.env.DATABASE_URL as string });
+const databaseUrl = process.env.DATABASE_URL;
+if (!databaseUrl) {
+  throw new Error("DATABASE_URL environment variable is not set. Please define it before running the seed script.");
+}
+
+const adapter = new PrismaPg({ connectionString: databaseUrl });
 const prisma = new PrismaClient({ adapter });
 
 // ---------------------------------------------------------------------------
@@ -84,51 +89,14 @@ const STORES: { name: string; category: StoreCategory }[] = [
   { name: "Staples", category: "OTHER" },
 ];
 
-const VOLUNTEERS = [
-  "Sarah Johnson",
-  "Mike Davis",
-  "Lisa Chen",
-  "Emily Rodriguez",
-  "David Kim",
-  "Omar Hassan",
-  "Priya Patel",
-];
-
-const RECIPIENTS = [
-  "Family A",
-  "Family B",
-  "Family C",
-  "Single Mother D",
-  "Senior Citizen E",
-  "Homeless Individual F",
-  "Student G",
-  "Teen H",
-  "Single Parent I",
-  "Veteran J",
-  "Senior Couple K",
-  "Job Seeker L",
-];
-
 // ---------------------------------------------------------------------------
 // Helpers
 // ---------------------------------------------------------------------------
-
-function randomItem<T>(arr: T[]): T {
-  return arr[Math.floor(Math.random() * arr.length)];
-}
-
-function randomDigits(n: number): string {
-  return Array.from({ length: n }, () => Math.floor(Math.random() * 10)).join("");
-}
 
 function daysAgo(n: number): Date {
   const d = new Date();
   d.setDate(d.getDate() - n);
   return d;
-}
-
-function round2(n: number): number {
-  return Math.round(n * 100) / 100;
 }
 
 // ---------------------------------------------------------------------------
@@ -863,35 +831,46 @@ async function main() {
       continue;
     }
 
-    const card = await prisma.giftCard.create({
-      data: {
-        storeId,
-        lastFourDigits: spec.last4,
-        initialAmount: spec.initial,
-        remainingAmount: spec.remaining,
-        status: spec.status,
-        notes: spec.notes ?? null,
-        createdAt: daysAgo(spec.createdDaysAgo),
-      },
-    });
-    cardCount++;
-
-    for (const tx of spec.transactions) {
-      await prisma.transaction.create({
-        data: {
-          giftCardId: card.id,
-          amount: tx.amount,
-          type: tx.type,
-          volunteerName: tx.volunteerName,
-          recipientName: tx.recipientName ?? null,
-          createdAt: daysAgo(tx.daysAgo),
+    await prisma.$transaction(async (tx) => {
+      const card = await tx.giftCard.upsert({
+        where: { storeId_lastFourDigits: { storeId, lastFourDigits: spec.last4 } },
+        update: {
+          initialAmount: spec.initial,
+          remainingAmount: spec.remaining,
+          status: spec.status,
+          notes: spec.notes ?? null,
+        },
+        create: {
+          storeId,
+          lastFourDigits: spec.last4,
+          initialAmount: spec.initial,
+          remainingAmount: spec.remaining,
+          status: spec.status,
+          notes: spec.notes ?? null,
+          createdAt: daysAgo(spec.createdDaysAgo),
         },
       });
-      txCount++;
-    }
+      cardCount++;
+
+      await tx.transaction.deleteMany({ where: { giftCardId: card.id } });
+
+      for (const transactionSpec of spec.transactions) {
+        await tx.transaction.create({
+          data: {
+            giftCardId: card.id,
+            amount: transactionSpec.amount,
+            type: transactionSpec.type,
+            volunteerName: transactionSpec.volunteerName,
+            recipientName: transactionSpec.recipientName ?? null,
+            createdAt: daysAgo(transactionSpec.daysAgo),
+          },
+        });
+        txCount++;
+      }
+    });
   }
 
-  console.log(`Created ${cardCount} gift cards and ${txCount} transactions.`);
+  console.log(`Upserted ${cardCount} gift cards and ${txCount} transactions.`);
   console.log("Seeding complete.");
 }
 
