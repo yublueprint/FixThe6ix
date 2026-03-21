@@ -1,7 +1,16 @@
 const { z } = require("zod");
 
-const categoryList = ["FAST_FOOD", "GROCERY", "CLOTHING", "RESTAURANT"];
-
+const categoryList = [
+  "FAST_FOOD",
+  "GROCERY",
+  "CLOTHING",
+  "RESTAURANT",
+  "PHARMACY",
+  "ELECTRONICS",
+  "HOME_GOODS",
+  "ONLINE",
+  "OTHER",
+];
 const categoryEnum = z.enum(categoryList)
 
 const storeSchema = z.object({
