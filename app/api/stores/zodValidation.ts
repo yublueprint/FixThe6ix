@@ -35,7 +35,7 @@ export const postStore = (name: string, category: string, logoUrl: string | null
     return postStoreSchema.safeParse({
         name,
         category,
-        ...(logoUrl ? { logoUrl } : {}),
+        logoUrl: logoUrl ?? undefined,
     });
 
 }
