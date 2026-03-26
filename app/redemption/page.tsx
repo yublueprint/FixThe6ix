@@ -50,8 +50,8 @@ type DataStore = { cards: GiftCard[]; transactions: Transaction[] }
 const VOLUNTEERS = ["Sarah Johnson", "Mike Davis", "Lisa Chen", "James Lee", "Amy Brown"]
 
 function statusStyle(status: string) {
-  if (status === "Active")  return "bg-[#bbf7d0] text-[#166534]"
-  if (status === "Used")    return "bg-[#f5f5f5] text-[#525252]"
+  if (status === "Active") return "bg-[#bbf7d0] text-[#166534]"
+  if (status === "Used") return "bg-[#f5f5f5] text-[#525252]"
   if (status === "Donated") return "bg-[#bfdbfe] text-[#1e40af]"
   return "bg-[#fef9c3] text-[#854d0e]"
 }
@@ -106,10 +106,10 @@ export default function InventoryPage() {
       .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime())
   }, [selectedId, data.transactions])
 
-  const totalCards     = data.cards.length
-  const activeCards    = data.cards.filter(c => c.status === "Active").length
+  const totalCards = data.cards.length
+  const activeCards = data.cards.filter(c => c.status === "Active").length
   const totalRemaining = data.cards.reduce((s, c) => s + c.remainingBalance, 0)
-  const totalInitial   = data.cards.reduce((s, c) => s + c.initialBalance, 0)
+  const totalInitial = data.cards.reduce((s, c) => s + c.initialBalance, 0)
 
   function selectCard(id: number) {
     if (selectedId === id) {
@@ -192,10 +192,10 @@ export default function InventoryPage() {
             {/* ── Stats ── */}
             <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
               {[
-                { label: "Total Cards",      value: totalCards,   sub: "All gift cards in system" },
-                { label: "Active Cards",     value: activeCards,  sub: "Cards with remaining balance" },
-                { label: "Total Remaining",  value: `$${totalRemaining.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`, sub: "Available across all cards" },
-                { label: "Total Initial",    value: `$${totalInitial.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`,    sub: "Value of all cards received" },
+                { label: "Total Cards", value: totalCards, sub: "All gift cards in system" },
+                { label: "Active Cards", value: activeCards, sub: "Cards with remaining balance" },
+                { label: "Total Remaining", value: `$${totalRemaining.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`, sub: "Available across all cards" },
+                { label: "Total Initial", value: `$${totalInitial.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`, sub: "Value of all cards received" },
               ].map(s => (
                 <div key={s.label} className="border border-[#e2e8f0] rounded-[12px] p-5">
                   <p className="text-xs font-medium text-[#737373]">{s.label}</p>
@@ -242,276 +242,276 @@ export default function InventoryPage() {
 
               {/* Table */}
               <div className="overflow-x-auto">
-              <Table>
-                <TableHeader>
-                  <TableRow className="bg-[#fafafa] hover:bg-[#fafafa]">
-                    <TableHead className="text-xs font-medium text-[#737373] py-3 pl-6">Store</TableHead>
-                    <TableHead className="text-xs font-medium text-[#737373] py-3">Card</TableHead>
-                    <TableHead className="text-xs font-medium text-[#737373] py-3">Initial Balance</TableHead>
-                    <TableHead className="text-xs font-medium text-[#737373] py-3">Remaining</TableHead>
-                    <TableHead className="text-xs font-medium text-[#737373] py-3">Status</TableHead>
-                    <TableHead className="text-xs font-medium text-[#737373] py-3">Added By</TableHead>
-                    <TableHead className="text-xs font-medium text-[#737373] py-3 pr-6" />
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {filteredCards.length === 0 ? (
-                    <TableRow>
-                      <TableCell colSpan={7} className="h-24 text-center text-[#737373] text-sm">
-                        No cards match your search.
-                      </TableCell>
+                <Table>
+                  <TableHeader>
+                    <TableRow className="bg-[#fafafa] hover:bg-[#fafafa]">
+                      <TableHead className="text-xs font-medium text-[#737373] py-3 pl-6">Store</TableHead>
+                      <TableHead className="text-xs font-medium text-[#737373] py-3">Card</TableHead>
+                      <TableHead className="text-xs font-medium text-[#737373] py-3">Initial Balance</TableHead>
+                      <TableHead className="text-xs font-medium text-[#737373] py-3">Remaining</TableHead>
+                      <TableHead className="text-xs font-medium text-[#737373] py-3">Status</TableHead>
+                      <TableHead className="text-xs font-medium text-[#737373] py-3">Added By</TableHead>
+                      <TableHead className="text-xs font-medium text-[#737373] py-3 pr-6" />
                     </TableRow>
-                  ) : filteredCards.map(card => {
-                    const isOpen = selectedId === card.id
-                    const pct = card.initialBalance > 0
-                      ? (card.remainingBalance / card.initialBalance) * 100
-                      : 0
+                  </TableHeader>
+                  <TableBody>
+                    {filteredCards.length === 0 ? (
+                      <TableRow>
+                        <TableCell colSpan={7} className="h-24 text-center text-[#737373] text-sm">
+                          No cards match your search.
+                        </TableCell>
+                      </TableRow>
+                    ) : filteredCards.map(card => {
+                      const isOpen = selectedId === card.id
+                      const pct = card.initialBalance > 0
+                        ? (card.remainingBalance / card.initialBalance) * 100
+                        : 0
 
-                    return (
-                      <React.Fragment key={card.id}>
+                      return (
+                        <React.Fragment key={card.id}>
 
-                        {/* Card row */}
-                        <TableRow
-                          className={`border-[#e2e8f0] cursor-pointer transition-colors ${isOpen ? "bg-[#f8faff]" : "hover:bg-[#fafafa]"}`}
-                          onClick={() => selectCard(card.id)}
-                        >
-                          <TableCell className="text-sm font-medium text-[#0a0a0a] py-3 pl-6">{card.store}</TableCell>
-                          <TableCell className="text-sm text-[#525252] py-3 font-mono tracking-wide align-middle">•••• {card.last4}</TableCell>
-                          <TableCell className="text-sm text-[#525252] py-3 align-middle">${card.initialBalance.toFixed(2)}</TableCell>
-                          <TableCell className="py-3 align-middle">
-                            <div className="flex flex-col gap-1">
-                              <span className={`text-sm font-medium ${card.remainingBalance === 0 ? "text-[#a3a3a3]" : "text-[#166534]"}`}>
-                                ${card.remainingBalance.toFixed(2)}
-                              </span>
-                              <div className="w-20 h-1 bg-[#e2e8f0] rounded-full overflow-hidden">
-                                <div className="h-full bg-[#22c55e] rounded-full" style={{ width: `${pct}%` }} />
+                          {/* Card row */}
+                          <TableRow
+                            className={`border-[#e2e8f0] cursor-pointer transition-colors ${isOpen ? "bg-[#f8faff]" : "hover:bg-[#fafafa]"}`}
+                            onClick={() => selectCard(card.id)}
+                          >
+                            <TableCell className="text-sm font-medium text-[#0a0a0a] py-3 pl-6">{card.store}</TableCell>
+                            <TableCell className="text-sm text-[#525252] py-3 font-mono tracking-wide align-middle">•••• {card.last4}</TableCell>
+                            <TableCell className="text-sm text-[#525252] py-3 align-middle">${card.initialBalance.toFixed(2)}</TableCell>
+                            <TableCell className="py-3 align-middle">
+                              <div className="flex flex-col gap-1">
+                                <span className={`text-sm font-medium ${card.remainingBalance === 0 ? "text-[#a3a3a3]" : "text-[#166534]"}`}>
+                                  ${card.remainingBalance.toFixed(2)}
+                                </span>
+                                <div className="w-20 h-1 bg-[#e2e8f0] rounded-full overflow-hidden">
+                                  <div className="h-full bg-[#22c55e] rounded-full" style={{ width: `${pct}%` }} />
+                                </div>
                               </div>
-                            </div>
-                          </TableCell>
-                          <TableCell className="py-3 align-middle">
-                            <span className={`text-xs font-semibold px-2.5 py-1 rounded-full ${statusStyle(card.status)}`}>
-                              {card.status}
-                            </span>
-                          </TableCell>
-                          <TableCell className="text-sm text-[#525252] py-3 align-middle">{card.addedBy}</TableCell>
-                          <TableCell className="py-3 pr-6 align-middle text-right">
-                            <HugeiconsIcon
-                              icon={isOpen ? ArrowUp01Icon : ArrowDown01Icon}
-                              strokeWidth={2}
-                              className="size-4 text-[#a3a3a3] inline-block"
-                            />
-                          </TableCell>
-                        </TableRow>
+                            </TableCell>
+                            <TableCell className="py-3 align-middle">
+                              <span className={`text-xs font-semibold px-2.5 py-1 rounded-full ${statusStyle(card.status)}`}>
+                                {card.status}
+                              </span>
+                            </TableCell>
+                            <TableCell className="text-sm text-[#525252] py-3 align-middle">{card.addedBy}</TableCell>
+                            <TableCell className="py-3 pr-6 align-middle text-right">
+                              <HugeiconsIcon
+                                icon={isOpen ? ArrowUp01Icon : ArrowDown01Icon}
+                                strokeWidth={2}
+                                className="size-4 text-[#a3a3a3] inline-block"
+                              />
+                            </TableCell>
+                          </TableRow>
 
-                        {/* Expanded detail panel */}
-                        {isOpen && selectedCard && (
-                          <TableRow className="bg-[#f8faff] hover:bg-[#f8faff] border-[#e2e8f0]">
-                            <TableCell colSpan={7} className="p-0">
-                              <div className="px-6 py-5 border-t border-[#dbeafe]">
+                          {/* Expanded detail panel */}
+                          {isOpen && selectedCard && (
+                            <TableRow className="bg-[#f8faff] hover:bg-[#f8faff] border-[#e2e8f0]">
+                              <TableCell colSpan={7} className="p-0">
+                                <div className="px-6 py-5 border-t border-[#dbeafe]">
 
-                                {/* Action buttons — only if balance remains */}
-                                {selectedCard.remainingBalance > 0 && (
-                                  <div className="flex gap-2 mb-4">
-                                    <button
-                                      onClick={() => { setShowSpend(v => !v); setShowDonate(false) }}
-                                      className={`flex items-center gap-1.5 text-sm font-medium px-3.5 py-2 rounded-[6px] border transition-colors ${showSpend ? "bg-[#0a0a0a] text-white border-[#0a0a0a]" : "bg-white text-[#0a0a0a] border-[#e2e8f0] hover:bg-[#fafafa]"}`}
-                                    >
-                                      <HugeiconsIcon icon={ShoppingBasket01Icon} strokeWidth={2} className="size-4" />
-                                      Record Spend
-                                    </button>
-                                    <button
-                                      onClick={() => { setShowDonate(v => !v); setShowSpend(false) }}
-                                      className={`flex items-center gap-1.5 text-sm font-medium px-3.5 py-2 rounded-[6px] border transition-colors ${showDonate ? "bg-[#0a0a0a] text-white border-[#0a0a0a]" : "bg-white text-[#0a0a0a] border-[#e2e8f0] hover:bg-[#fafafa]"}`}
-                                    >
-                                      <HugeiconsIcon icon={GiveBloodIcon} strokeWidth={2} className="size-4" />
-                                      Record Donation
-                                    </button>
-                                  </div>
-                                )}
+                                  {/* Action buttons — only if balance remains */}
+                                  {selectedCard.remainingBalance > 0 && (
+                                    <div className="flex gap-2 mb-4">
+                                      <button
+                                        onClick={() => { setShowSpend(v => !v); setShowDonate(false) }}
+                                        className={`flex items-center gap-1.5 text-sm font-medium px-3.5 py-2 rounded-[6px] border transition-colors ${showSpend ? "bg-[#0a0a0a] text-white border-[#0a0a0a]" : "bg-white text-[#0a0a0a] border-[#e2e8f0] hover:bg-[#fafafa]"}`}
+                                      >
+                                        <HugeiconsIcon icon={ShoppingBasket01Icon} strokeWidth={2} className="size-4" />
+                                        Record Spend
+                                      </button>
+                                      <button
+                                        onClick={() => { setShowDonate(v => !v); setShowSpend(false) }}
+                                        className={`flex items-center gap-1.5 text-sm font-medium px-3.5 py-2 rounded-[6px] border transition-colors ${showDonate ? "bg-[#0a0a0a] text-white border-[#0a0a0a]" : "bg-white text-[#0a0a0a] border-[#e2e8f0] hover:bg-[#fafafa]"}`}
+                                      >
+                                        <HugeiconsIcon icon={GiveBloodIcon} strokeWidth={2} className="size-4" />
+                                        Record Donation
+                                      </button>
+                                    </div>
+                                  )}
 
-                                {/* Spend form */}
-                                {showSpend && (
-                                  <div className="mb-5 bg-white border border-[#e2e8f0] rounded-[8px] p-4 space-y-3">
-                                    <p className="text-sm font-semibold text-[#0a0a0a]">Record a Spend</p>
-                                    <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-                                      <div className="space-y-1.5">
-                                        <Label className="text-xs font-medium text-[#737373]">Amount ($)</Label>
-                                        <Input
-                                          type="number" min="0.01" step="0.01" placeholder="0.00"
-                                          value={spendAmt} onChange={e => setSpendAmt(e.target.value)}
-                                          className="h-8 text-sm rounded-[6px]"
-                                        />
+                                  {/* Spend form */}
+                                  {showSpend && (
+                                    <div className="mb-5 bg-white border border-[#e2e8f0] rounded-[8px] p-4 space-y-3">
+                                      <p className="text-sm font-semibold text-[#0a0a0a]">Record a Spend</p>
+                                      <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                                        <div className="space-y-1.5">
+                                          <Label className="text-xs font-medium text-[#737373]">Amount ($)</Label>
+                                          <Input
+                                            type="number" min="0.01" step="0.01" placeholder="0.00"
+                                            value={spendAmt} onChange={e => setSpendAmt(e.target.value)}
+                                            className="h-8 text-sm rounded-[6px]"
+                                          />
+                                        </div>
+                                        <div className="space-y-1.5">
+                                          <Label className="text-xs font-medium text-[#737373]">Volunteer</Label>
+                                          <Select value={spendVol} onValueChange={setSpendVol}>
+                                            <SelectTrigger size="sm" className="rounded-[6px]">
+                                              <SelectValue placeholder="Select volunteer" />
+                                            </SelectTrigger>
+                                            <SelectContent>
+                                              {VOLUNTEERS.map(v => <SelectItem key={v} value={v}>{v}</SelectItem>)}
+                                            </SelectContent>
+                                          </Select>
+                                        </div>
+                                        <div className="space-y-1.5">
+                                          <Label className="text-xs font-medium text-[#737373]">Notes (optional)</Label>
+                                          <Input
+                                            placeholder="e.g. Groceries for Family A"
+                                            value={spendNotes} onChange={e => setSpendNotes(e.target.value)}
+                                            className="h-8 text-sm rounded-[6px]"
+                                          />
+                                        </div>
                                       </div>
-                                      <div className="space-y-1.5">
-                                        <Label className="text-xs font-medium text-[#737373]">Volunteer</Label>
-                                        <Select value={spendVol} onValueChange={setSpendVol}>
-                                          <SelectTrigger size="sm" className="rounded-[6px]">
-                                            <SelectValue placeholder="Select volunteer" />
-                                          </SelectTrigger>
-                                          <SelectContent>
-                                            {VOLUNTEERS.map(v => <SelectItem key={v} value={v}>{v}</SelectItem>)}
-                                          </SelectContent>
-                                        </Select>
+                                      {spendErr && <p className="text-xs text-red-500">{spendErr}</p>}
+                                      <div className="flex gap-2">
+                                        <button
+                                          onClick={handleSpend}
+                                          className="text-sm font-medium bg-[#0a0a0a] text-white px-3.5 py-1.5 rounded-[6px] hover:bg-[#262626] transition-colors"
+                                        >
+                                          Confirm Spend
+                                        </button>
+                                        <button
+                                          onClick={() => { setShowSpend(false); setSpendErr("") }}
+                                          className="text-sm font-medium text-[#737373] px-3.5 py-1.5 rounded-[6px] hover:bg-white transition-colors"
+                                        >
+                                          Cancel
+                                        </button>
+                                      </div>
+                                    </div>
+                                  )}
+
+                                  {/* Donation form */}
+                                  {showDonate && (
+                                    <div className="mb-5 bg-white border border-[#e2e8f0] rounded-[8px] p-4 space-y-3">
+                                      <p className="text-sm font-semibold text-[#0a0a0a]">Record a Donation Out</p>
+                                      <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                                        <div className="space-y-1.5">
+                                          <Label className="text-xs font-medium text-[#737373]">Recipient</Label>
+                                          <Input
+                                            placeholder="e.g. Family A"
+                                            value={donateRecip} onChange={e => setDonateRecip(e.target.value)}
+                                            className="h-8 text-sm rounded-[6px]"
+                                          />
+                                        </div>
+                                        <div className="space-y-1.5">
+                                          <Label className="text-xs font-medium text-[#737373]">Volunteer</Label>
+                                          <Select value={donateVol} onValueChange={setDonateVol}>
+                                            <SelectTrigger size="sm" className="rounded-[6px]">
+                                              <SelectValue placeholder="Select volunteer" />
+                                            </SelectTrigger>
+                                            <SelectContent>
+                                              {VOLUNTEERS.map(v => <SelectItem key={v} value={v}>{v}</SelectItem>)}
+                                            </SelectContent>
+                                          </Select>
+                                        </div>
+                                        <div className="space-y-1.5">
+                                          <Label className="text-xs font-medium text-[#737373]">Amount</Label>
+                                          <div className="flex gap-3 items-center pt-0.5">
+                                            <label className="flex items-center gap-1.5 text-xs text-[#525252] cursor-pointer">
+                                              <input
+                                                type="radio" checked={donateFull}
+                                                onChange={() => { setDonateFull(true); setDonateAmt("") }}
+                                                className="accent-[#0a0a0a]"
+                                              />
+                                              Full (${selectedCard.remainingBalance.toFixed(2)})
+                                            </label>
+                                            <label className="flex items-center gap-1.5 text-xs text-[#525252] cursor-pointer">
+                                              <input
+                                                type="radio" checked={!donateFull}
+                                                onChange={() => setDonateFull(false)}
+                                                className="accent-[#0a0a0a]"
+                                              />
+                                              Partial
+                                            </label>
+                                          </div>
+                                          {!donateFull && (
+                                            <Input
+                                              type="number" min="0.01" step="0.01" placeholder="0.00"
+                                              value={donateAmt} onChange={e => setDonateAmt(e.target.value)}
+                                              className="h-8 text-sm rounded-[6px] mt-1.5"
+                                            />
+                                          )}
+                                        </div>
                                       </div>
                                       <div className="space-y-1.5">
                                         <Label className="text-xs font-medium text-[#737373]">Notes (optional)</Label>
                                         <Input
-                                          placeholder="e.g. Groceries for Family A"
-                                          value={spendNotes} onChange={e => setSpendNotes(e.target.value)}
+                                          placeholder="e.g. Weekly groceries for the family"
+                                          value={donateNotes} onChange={e => setDonateNotes(e.target.value)}
                                           className="h-8 text-sm rounded-[6px]"
                                         />
                                       </div>
-                                    </div>
-                                    {spendErr && <p className="text-xs text-red-500">{spendErr}</p>}
-                                    <div className="flex gap-2">
-                                      <button
-                                        onClick={handleSpend}
-                                        className="text-sm font-medium bg-[#0a0a0a] text-white px-3.5 py-1.5 rounded-[6px] hover:bg-[#262626] transition-colors"
-                                      >
-                                        Confirm Spend
-                                      </button>
-                                      <button
-                                        onClick={() => { setShowSpend(false); setSpendErr("") }}
-                                        className="text-sm font-medium text-[#737373] px-3.5 py-1.5 rounded-[6px] hover:bg-white transition-colors"
-                                      >
-                                        Cancel
-                                      </button>
-                                    </div>
-                                  </div>
-                                )}
-
-                                {/* Donation form */}
-                                {showDonate && (
-                                  <div className="mb-5 bg-white border border-[#e2e8f0] rounded-[8px] p-4 space-y-3">
-                                    <p className="text-sm font-semibold text-[#0a0a0a]">Record a Donation Out</p>
-                                    <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-                                      <div className="space-y-1.5">
-                                        <Label className="text-xs font-medium text-[#737373]">Recipient</Label>
-                                        <Input
-                                          placeholder="e.g. Family A"
-                                          value={donateRecip} onChange={e => setDonateRecip(e.target.value)}
-                                          className="h-8 text-sm rounded-[6px]"
-                                        />
+                                      {donateErr && <p className="text-xs text-red-500">{donateErr}</p>}
+                                      <div className="flex gap-2">
+                                        <button
+                                          onClick={handleDonate}
+                                          className="text-sm font-medium bg-[#0a0a0a] text-white px-3.5 py-1.5 rounded-[6px] hover:bg-[#262626] transition-colors"
+                                        >
+                                          Confirm Donation
+                                        </button>
+                                        <button
+                                          onClick={() => { setShowDonate(false); setDonateErr("") }}
+                                          className="text-sm font-medium text-[#737373] px-3.5 py-1.5 rounded-[6px] hover:bg-white transition-colors"
+                                        >
+                                          Cancel
+                                        </button>
                                       </div>
-                                      <div className="space-y-1.5">
-                                        <Label className="text-xs font-medium text-[#737373]">Volunteer</Label>
-                                        <Select value={donateVol} onValueChange={setDonateVol}>
-                                          <SelectTrigger size="sm" className="rounded-[6px]">
-                                            <SelectValue placeholder="Select volunteer" />
-                                          </SelectTrigger>
-                                          <SelectContent>
-                                            {VOLUNTEERS.map(v => <SelectItem key={v} value={v}>{v}</SelectItem>)}
-                                          </SelectContent>
-                                        </Select>
-                                      </div>
-                                      <div className="space-y-1.5">
-                                        <Label className="text-xs font-medium text-[#737373]">Amount</Label>
-                                        <div className="flex gap-3 items-center pt-0.5">
-                                          <label className="flex items-center gap-1.5 text-xs text-[#525252] cursor-pointer">
-                                            <input
-                                              type="radio" checked={donateFull}
-                                              onChange={() => { setDonateFull(true); setDonateAmt("") }}
-                                              className="accent-[#0a0a0a]"
-                                            />
-                                            Full (${selectedCard.remainingBalance.toFixed(2)})
-                                          </label>
-                                          <label className="flex items-center gap-1.5 text-xs text-[#525252] cursor-pointer">
-                                            <input
-                                              type="radio" checked={!donateFull}
-                                              onChange={() => setDonateFull(false)}
-                                              className="accent-[#0a0a0a]"
-                                            />
-                                            Partial
-                                          </label>
-                                        </div>
-                                        {!donateFull && (
-                                          <Input
-                                            type="number" min="0.01" step="0.01" placeholder="0.00"
-                                            value={donateAmt} onChange={e => setDonateAmt(e.target.value)}
-                                            className="h-8 text-sm rounded-[6px] mt-1.5"
-                                          />
-                                        )}
-                                      </div>
-                                    </div>
-                                    <div className="space-y-1.5">
-                                      <Label className="text-xs font-medium text-[#737373]">Notes (optional)</Label>
-                                      <Input
-                                        placeholder="e.g. Weekly groceries for the family"
-                                        value={donateNotes} onChange={e => setDonateNotes(e.target.value)}
-                                        className="h-8 text-sm rounded-[6px]"
-                                      />
-                                    </div>
-                                    {donateErr && <p className="text-xs text-red-500">{donateErr}</p>}
-                                    <div className="flex gap-2">
-                                      <button
-                                        onClick={handleDonate}
-                                        className="text-sm font-medium bg-[#0a0a0a] text-white px-3.5 py-1.5 rounded-[6px] hover:bg-[#262626] transition-colors"
-                                      >
-                                        Confirm Donation
-                                      </button>
-                                      <button
-                                        onClick={() => { setShowDonate(false); setDonateErr("") }}
-                                        className="text-sm font-medium text-[#737373] px-3.5 py-1.5 rounded-[6px] hover:bg-white transition-colors"
-                                      >
-                                        Cancel
-                                      </button>
-                                    </div>
-                                  </div>
-                                )}
-
-                                {/* Transaction history */}
-                                <div>
-                                  <p className="text-xs font-semibold text-[#737373] uppercase tracking-wide mb-3">
-                                    Transaction History
-                                  </p>
-                                  {cardTxns.length === 0 ? (
-                                    <p className="text-sm text-[#a3a3a3] text-center py-4">
-                                      No transactions recorded for this card.
-                                    </p>
-                                  ) : (
-                                    <div className="bg-white border border-[#e2e8f0] rounded-[8px] overflow-hidden">
-                                      <table className="w-full text-sm">
-                                        <thead>
-                                          <tr className="bg-[#fafafa] border-b border-[#e2e8f0]">
-                                            <th className="text-xs font-medium text-[#737373] text-left py-2.5 pl-4 pr-3">Date & Time</th>
-                                            <th className="text-xs font-medium text-[#737373] text-left py-2.5 pr-3">Type</th>
-                                            <th className="text-xs font-medium text-[#737373] text-left py-2.5 pr-3">Amount</th>
-                                            <th className="text-xs font-medium text-[#737373] text-left py-2.5 pr-3">Volunteer</th>
-                                            <th className="text-xs font-medium text-[#737373] text-left py-2.5 pr-3">Recipient</th>
-                                            <th className="text-xs font-medium text-[#737373] text-left py-2.5 pr-4">Notes</th>
-                                          </tr>
-                                        </thead>
-                                        <tbody>
-                                          {cardTxns.map((t, i) => (
-                                            <tr key={t.id} className={i < cardTxns.length - 1 ? "border-b border-[#e2e8f0]" : ""}>
-                                              <td className="py-2.5 pl-4 pr-3 text-[#525252] whitespace-nowrap">{fmt(t.date)}</td>
-                                              <td className="py-2.5 pr-3">
-                                                <span className={`text-xs font-semibold px-2 py-0.5 rounded-full ${t.type === "spend" ? "bg-[#fed7aa] text-[#9a3412]" : "bg-[#bbf7d0] text-[#166534]"}`}>
-                                                  {t.type === "spend" ? "Spend" : "Donation"}
-                                                </span>
-                                              </td>
-                                              <td className="py-2.5 pr-3 font-medium text-[#0a0a0a]">-${t.amount.toFixed(2)}</td>
-                                              <td className="py-2.5 pr-3 text-[#525252]">{t.volunteer}</td>
-                                              <td className="py-2.5 pr-3 text-[#525252]">{t.recipient ?? "—"}</td>
-                                              <td className="py-2.5 pr-4 text-[#a3a3a3]">{t.notes || "—"}</td>
-                                            </tr>
-                                          ))}
-                                        </tbody>
-                                      </table>
                                     </div>
                                   )}
+
+                                  {/* Transaction history */}
+                                  <div>
+                                    <p className="text-xs font-semibold text-[#737373] uppercase tracking-wide mb-3">
+                                      Transaction History
+                                    </p>
+                                    {cardTxns.length === 0 ? (
+                                      <p className="text-sm text-[#a3a3a3] text-center py-4">
+                                        No transactions recorded for this card.
+                                      </p>
+                                    ) : (
+                                      <div className="bg-white border border-[#e2e8f0] rounded-[8px] overflow-hidden">
+                                        <table className="w-full text-sm">
+                                          <thead>
+                                            <tr className="bg-[#fafafa] border-b border-[#e2e8f0]">
+                                              <th className="text-xs font-medium text-[#737373] text-left py-2.5 pl-4 pr-3">Date & Time</th>
+                                              <th className="text-xs font-medium text-[#737373] text-left py-2.5 pr-3">Type</th>
+                                              <th className="text-xs font-medium text-[#737373] text-left py-2.5 pr-3">Amount</th>
+                                              <th className="text-xs font-medium text-[#737373] text-left py-2.5 pr-3">Volunteer</th>
+                                              <th className="text-xs font-medium text-[#737373] text-left py-2.5 pr-3">Recipient</th>
+                                              <th className="text-xs font-medium text-[#737373] text-left py-2.5 pr-4">Notes</th>
+                                            </tr>
+                                          </thead>
+                                          <tbody>
+                                            {cardTxns.map((t, i) => (
+                                              <tr key={t.id} className={i < cardTxns.length - 1 ? "border-b border-[#e2e8f0]" : ""}>
+                                                <td className="py-2.5 pl-4 pr-3 text-[#525252] whitespace-nowrap">{fmt(t.date)}</td>
+                                                <td className="py-2.5 pr-3">
+                                                  <span className={`text-xs font-semibold px-2 py-0.5 rounded-full ${t.type === "spend" ? "bg-[#fed7aa] text-[#9a3412]" : "bg-[#bbf7d0] text-[#166534]"}`}>
+                                                    {t.type === "spend" ? "Spend" : "Donation"}
+                                                  </span>
+                                                </td>
+                                                <td className="py-2.5 pr-3 font-medium text-[#0a0a0a]">-${t.amount.toFixed(2)}</td>
+                                                <td className="py-2.5 pr-3 text-[#525252]">{t.volunteer}</td>
+                                                <td className="py-2.5 pr-3 text-[#525252]">{t.recipient ?? "—"}</td>
+                                                <td className="py-2.5 pr-4 text-[#a3a3a3]">{t.notes || "—"}</td>
+                                              </tr>
+                                            ))}
+                                          </tbody>
+                                        </table>
+                                      </div>
+                                    )}
+                                  </div>
+
                                 </div>
+                              </TableCell>
+                            </TableRow>
+                          )}
 
-                              </div>
-                            </TableCell>
-                          </TableRow>
-                        )}
-
-                      </React.Fragment>
-                    )
-                  })}
-                </TableBody>
-              </Table>
+                        </React.Fragment>
+                      )
+                    })}
+                  </TableBody>
+                </Table>
               </div>{/* end overflow-x-auto */}
 
               {/* Footer */}
