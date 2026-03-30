@@ -18,7 +18,7 @@ import {
   Search01Icon,
 } from "@hugeicons/core-free-icons"
 import { STORE_CATEGORIES, CATEGORY_RAW, TreemapCell } from "@/lib/treemap"
-import redemptionData from "../redemption/data.json"
+import redemptionData from "../inventory/data.json"
 
 // ── Constants ─────────────────────────────────────────────────────────────────
 

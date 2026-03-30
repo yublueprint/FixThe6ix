@@ -12,10 +12,12 @@ import {
 } from "@/components/ui/select"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
+import { Button } from "@/components/ui/button"
+import { Checkbox } from "@/components/ui/checkbox"
 import { HugeiconsIcon } from "@hugeicons/react"
 import {
   Search01Icon, ArrowDown01Icon, ArrowUp01Icon,
-  ShoppingBasket01Icon, GiveBloodIcon,
+  ShoppingBasket01Icon, GiveBloodIcon, Delete01Icon, Edit01Icon,
 } from "@hugeicons/core-free-icons"
 import rawData from "./data.json"
 
@@ -70,6 +72,7 @@ export default function InventoryPage() {
   const [searchStore, setSearchStore] = React.useState("")
   const [searchLast4, setSearchLast4] = React.useState("")
   const [selectedId, setSelectedId] = React.useState<number | null>(null)
+  const [selectedRows, setSelectedRows] = React.useState<number[]>([])
 
   // Spend form
   const [showSpend, setShowSpend] = React.useState(false)
@@ -86,6 +89,13 @@ export default function InventoryPage() {
   const [donateVol, setDonateVol] = React.useState("")
   const [donateNotes, setDonateNotes] = React.useState("")
   const [donateErr, setDonateErr] = React.useState("")
+
+  // Edit form
+  const [showEditSheet, setShowEditSheet] = React.useState(false)
+  const [editCardId, setEditCardId] = React.useState<number | null>(null)
+  const [editStore, setEditStore] = React.useState("")
+  const [editInitialBalance, setEditInitialBalance] = React.useState("")
+  const [editRemainingBalance, setEditRemainingBalance] = React.useState("")
 
   const uniqueStores = React.useMemo(() =>
     [...new Set(data.cards.map(c => c.store))].sort(), [data.cards])
@@ -106,10 +116,12 @@ export default function InventoryPage() {
       .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime())
   }, [selectedId, data.transactions])
 
-  const totalCards = data.cards.length
-  const activeCards = data.cards.filter(c => c.status === "Active").length
-  const totalRemaining = data.cards.reduce((s, c) => s + c.remainingBalance, 0)
-  const totalInitial = data.cards.reduce((s, c) => s + c.initialBalance, 0)
+  const statsCards = selectedRows.length > 0 ? data.cards.filter(c => selectedRows.includes(c.id)) : data.cards
+
+  const totalCards = statsCards.length
+  const activeCards = statsCards.filter(c => c.status === "Active").length
+  const totalRemaining = statsCards.reduce((s, c) => s + c.remainingBalance, 0)
+  const totalInitial = statsCards.reduce((s, c) => s + c.initialBalance, 0)
 
   function selectCard(id: number) {
     if (selectedId === id) {
@@ -120,6 +132,50 @@ export default function InventoryPage() {
       setSpendAmt(""); setSpendVol(""); setSpendNotes(""); setSpendErr("")
       setDonateAmt(""); setDonateRecip(""); setDonateVol(""); setDonateNotes("")
       setDonateErr(""); setDonateFull(true)
+    }
+  }
+
+  function deleteCard(id: number) {
+    if (confirm("Are you sure you want to delete this gift card?")) {
+      setData(d => ({
+        cards: d.cards.filter(c => c.id !== id),
+        transactions: d.transactions.filter(t => t.cardId !== id)
+      }));
+      if (selectedId === id) setSelectedId(null);
+    }
+  }
+
+  function openEditCard(id: number) {
+    const card = data.cards.find(c => c.id === id);
+    if (card) {
+      setEditCardId(id);
+      setEditStore(card.store);
+      setEditInitialBalance(card.initialBalance.toString());
+      setEditRemainingBalance(card.remainingBalance.toString());
+      setShowEditSheet(true);
+    }
+  }
+
+  function saveEditCard() {
+    if (!editCardId) return;
+    const initial = parseFloat(editInitialBalance);
+    const remaining = parseFloat(editRemainingBalance);
+    if (isNaN(initial) || isNaN(remaining) || initial < 0 || remaining < 0 || remaining > initial) {
+      alert("Invalid balances");
+      return;
+    }
+    if (confirm("Are you sure you want to save these changes?")) {
+      setData(d => ({
+        ...d,
+        cards: d.cards.map(c => c.id === editCardId ? {
+          ...c,
+          store: editStore,
+          initialBalance: initial,
+          remainingBalance: remaining,
+          status: remaining === 0 ? "Used" : c.status
+        } : c)
+      }));
+      setShowEditSheet(false);
     }
   }
 
@@ -192,12 +248,12 @@ export default function InventoryPage() {
             {/* ── Stats ── */}
             <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
               {[
-                { label: "Total Cards", value: totalCards, sub: "All gift cards in system" },
-                { label: "Active Cards", value: activeCards, sub: "Cards with remaining balance" },
-                { label: "Total Remaining", value: `$${totalRemaining.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`, sub: "Available across all cards" },
-                { label: "Total Initial", value: `$${totalInitial.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`, sub: "Value of all cards received" },
+                { label: "Total Cards", value: totalCards, sub: selectedRows.length > 0 ? "Selected gift cards" : "All gift cards in system" },
+                { label: "Active Cards", value: activeCards, sub: selectedRows.length > 0 ? "Selected cards with balance" : "Cards with remaining balance" },
+                { label: "Total Remaining", value: `$${totalRemaining.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`, sub: selectedRows.length > 0 ? "Available in selected cards" : "Available across all cards" },
+                { label: "Total Initial", value: `$${totalInitial.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`, sub: selectedRows.length > 0 ? "Value of selected cards" : "Value of all cards received" },
               ].map(s => (
-                <div key={s.label} className="border border-[#e2e8f0] rounded-[12px] p-5">
+                <div key={s.label} className="bg-[#F1F5F9] border border-[#e2e8f0] rounded-[12px] p-5">
                   <p className="text-xs font-medium text-[#737373]">{s.label}</p>
                   <p className="text-[30px] font-semibold text-[#0a0a0a] mt-1 leading-none">{s.value}</p>
                   <p className="text-xs text-[#737373] mt-2">{s.sub}</p>
@@ -245,10 +301,23 @@ export default function InventoryPage() {
                 <Table>
                   <TableHeader>
                     <TableRow className="bg-[#fafafa] hover:bg-[#fafafa]">
-                      <TableHead className="text-xs font-medium text-[#737373] py-3 pl-6">Store</TableHead>
-                      <TableHead className="text-xs font-medium text-[#737373] py-3">Card</TableHead>
+                      <TableHead className="text-xs font-medium text-[#737373] py-3 pl-6">
+                        <Checkbox
+                          checked={selectedRows.length === filteredCards.length && filteredCards.length > 0}
+                          onCheckedChange={(checked) => {
+                            if (checked) {
+                              setSelectedRows(filteredCards.map(c => c.id))
+                            } else {
+                              setSelectedRows([])
+                            }
+                          }}
+                        />
+                      </TableHead>
+                      <TableHead className="text-xs font-medium text-[#737373] py-3">Store</TableHead>
+                      <TableHead className="text-xs font-medium text-[#737373] py-3">Card Number</TableHead>
                       <TableHead className="text-xs font-medium text-[#737373] py-3">Initial Balance</TableHead>
-                      <TableHead className="text-xs font-medium text-[#737373] py-3">Remaining</TableHead>
+                      <TableHead className="text-xs font-medium text-[#737373] py-3">Remaining Balance</TableHead>
+                      <TableHead className="text-xs font-medium text-[#737373] py-3">Amount Spent</TableHead>
                       <TableHead className="text-xs font-medium text-[#737373] py-3">Status</TableHead>
                       <TableHead className="text-xs font-medium text-[#737373] py-3">Added By</TableHead>
                       <TableHead className="text-xs font-medium text-[#737373] py-3 pr-6" />
@@ -257,7 +326,7 @@ export default function InventoryPage() {
                   <TableBody>
                     {filteredCards.length === 0 ? (
                       <TableRow>
-                        <TableCell colSpan={7} className="h-24 text-center text-[#737373] text-sm">
+                        <TableCell colSpan={9} className="h-24 text-center text-[#737373] text-sm">
                           No cards match your search.
                         </TableCell>
                       </TableRow>
@@ -275,7 +344,19 @@ export default function InventoryPage() {
                             className={`border-[#e2e8f0] cursor-pointer transition-colors ${isOpen ? "bg-[#f8faff]" : "hover:bg-[#fafafa]"}`}
                             onClick={() => selectCard(card.id)}
                           >
-                            <TableCell className="text-sm font-medium text-[#0a0a0a] py-3 pl-6">{card.store}</TableCell>
+                            <TableCell className="py-3 pl-6 align-middle" onClick={(e) => e.stopPropagation()}>
+                              <Checkbox
+                                checked={selectedRows.includes(card.id)}
+                                onCheckedChange={(checked) => {
+                                  if (checked) {
+                                    setSelectedRows(prev => [...prev, card.id])
+                                  } else {
+                                    setSelectedRows(prev => prev.filter(id => id !== card.id))
+                                  }
+                                }}
+                              />
+                            </TableCell>
+                            <TableCell className="text-sm font-medium text-[#0a0a0a] py-3">{card.store}</TableCell>
                             <TableCell className="text-sm text-[#525252] py-3 font-mono tracking-wide align-middle">•••• {card.last4}</TableCell>
                             <TableCell className="text-sm text-[#525252] py-3 align-middle">${card.initialBalance.toFixed(2)}</TableCell>
                             <TableCell className="py-3 align-middle">
@@ -288,6 +369,7 @@ export default function InventoryPage() {
                                 </div>
                               </div>
                             </TableCell>
+                            <TableCell className="text-sm text-[#C2410C] py-3 align-middle">${(card.initialBalance - card.remainingBalance).toFixed(2)}</TableCell>
                             <TableCell className="py-3 align-middle">
                               <span className={`text-xs font-semibold px-2.5 py-1 rounded-full ${statusStyle(card.status)}`}>
                                 {card.status}
@@ -295,18 +377,32 @@ export default function InventoryPage() {
                             </TableCell>
                             <TableCell className="text-sm text-[#525252] py-3 align-middle">{card.addedBy}</TableCell>
                             <TableCell className="py-3 pr-6 align-middle text-right">
-                              <HugeiconsIcon
-                                icon={isOpen ? ArrowUp01Icon : ArrowDown01Icon}
-                                strokeWidth={2}
-                                className="size-4 text-[#a3a3a3] inline-block"
-                              />
+                              <div className="flex items-center justify-end gap-2">
+                                <HugeiconsIcon
+                                  icon={Edit01Icon}
+                                  strokeWidth={2}
+                                  className="size-4 text-[#a3a3a3] hover:text-blue-500 cursor-pointer"
+                                  onClick={(e) => { e.stopPropagation(); openEditCard(card.id); }}
+                                />
+                                <HugeiconsIcon
+                                  icon={Delete01Icon}
+                                  strokeWidth={2}
+                                  className="size-4 text-[#a3a3a3] hover:text-red-500 cursor-pointer"
+                                  onClick={(e) => { e.stopPropagation(); deleteCard(card.id); }}
+                                />
+                                <HugeiconsIcon
+                                  icon={isOpen ? ArrowUp01Icon : ArrowDown01Icon}
+                                  strokeWidth={2}
+                                  className="size-4 text-[#a3a3a3] inline-block"
+                                />
+                              </div>
                             </TableCell>
                           </TableRow>
 
                           {/* Expanded detail panel */}
                           {isOpen && selectedCard && (
                             <TableRow className="bg-[#f8faff] hover:bg-[#f8faff] border-[#e2e8f0]">
-                              <TableCell colSpan={7} className="p-0">
+                              <TableCell colSpan={9} className="p-0">
                                 <div className="px-6 py-5 border-t border-[#dbeafe]">
 
                                   {/* Action buttons — only if balance remains */}
@@ -525,6 +621,72 @@ export default function InventoryPage() {
           </div>
         </div>
       </SidebarInset>
+
+      {/* Edit Modal */}
+      {showEditSheet && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50">
+          <div className="bg-white rounded-[12px] shadow-lg max-w-md w-full mx-4 max-h-[90vh] overflow-y-auto">
+            <div className="p-6">
+              <div className="flex items-center justify-between mb-4">
+                <h2 className="text-lg font-semibold text-[#0a0a0a]">Edit Gift Card</h2>
+                <button
+                  onClick={() => setShowEditSheet(false)}
+                  className="text-[#a3a3a3] hover:text-[#737373] transition-colors"
+                >
+                  <HugeiconsIcon icon={ArrowUp01Icon} strokeWidth={2} className="size-5 rotate-45" />
+                </button>
+              </div>
+              <div className="space-y-4">
+                <div className="space-y-1.5">
+                  <Label className="text-xs font-medium text-[#737373]">Store</Label>
+                  <Select value={editStore} onValueChange={setEditStore}>
+                    <SelectTrigger className="rounded-[26px] bg-[rgba(229,229,229,0.3)] border-[#e5e5e5] h-9 text-sm text-[#737373]">
+                      <SelectValue placeholder="Select store" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {uniqueStores.map(store => (
+                        <SelectItem key={store} value={store}>{store}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div className="grid grid-cols-2 gap-3">
+                  <div className="space-y-1.5">
+                    <Label className="text-xs font-medium text-[#737373]">Initial Balance</Label>
+                    <div className="relative">
+                      <span className="pointer-events-none absolute inset-y-0 left-3 flex items-center text-[#737373] text-sm">$</span>
+                      <Input
+                        value={editInitialBalance}
+                        onChange={(e) => setEditInitialBalance(e.target.value.replace(/[^0-9.]/g, ""))}
+                        placeholder="0.00"
+                        inputMode="decimal"
+                        className="rounded-[26px] bg-[rgba(229,229,229,0.3)] border-[#e5e5e5] h-9 text-sm text-[#737373] placeholder:text-[#737373] pl-7"
+                      />
+                    </div>
+                  </div>
+                  <div className="space-y-1.5">
+                    <Label className="text-xs font-medium text-[#737373]">Remaining Balance</Label>
+                    <div className="relative">
+                      <span className="pointer-events-none absolute inset-y-0 left-3 flex items-center text-[#737373] text-sm">$</span>
+                      <Input
+                        value={editRemainingBalance}
+                        onChange={(e) => setEditRemainingBalance(e.target.value.replace(/[^0-9.]/g, ""))}
+                        placeholder="0.00"
+                        inputMode="decimal"
+                        className="rounded-[26px] bg-[rgba(229,229,229,0.3)] border-[#e5e5e5] h-9 text-sm text-[#737373] placeholder:text-[#737373] pl-7"
+                      />
+                    </div>
+                  </div>
+                </div>
+              </div>
+              <div className="flex justify-end gap-3 mt-6">
+                <Button variant="outline" onClick={() => setShowEditSheet(false)} className="rounded-[6px]">Cancel</Button>
+                <Button onClick={saveEditCard} className="bg-[#0f172a] text-white text-sm font-medium px-4 py-2 rounded-[6px] hover:bg-[#1e293b] transition-colors">Save Changes</Button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
     </SidebarProvider>
   )
 }

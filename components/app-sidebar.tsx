@@ -29,7 +29,7 @@ const data = {
   navMain: [
     {
       title: "Home",
-      url: "/",
+      url: "/dashboard",
       icon: <HugeiconsIcon icon={DashboardSquare01Icon} strokeWidth={2} />,
     },
     {
@@ -39,7 +39,7 @@ const data = {
     },
     {
       title: "Inventory",
-      url: "/redemption",
+      url: "/inventory",
       icon: <HugeiconsIcon icon={Archive01Icon} strokeWidth={2} />,
     },
     {

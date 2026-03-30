@@ -17,7 +17,7 @@ import {
   Add01Icon, CreditCardIcon, File01Icon, DownloadIcon,
   CheckmarkCircle01Icon, AlertCircleIcon, ArrowRight01Icon,
 } from "@hugeicons/core-free-icons"
-import existingData from "../redemption/data.json"
+import existingData from "../inventory/data.json"
 
 // ── Constants ──────────────────────────────────────────────────────────────────
 
