@@ -274,7 +274,7 @@ export default function InventoryPage() {
                   <p className="text-xs text-[#737373]">{filteredCards.length} of {data.cards.length} cards</p>
                 </div>
                 <div className="flex gap-3">
-                  <Select value={searchStore} onValueChange={setSearchStore}>
+                  <Select value={searchStore} onValueChange={(val) => setSearchStore(val ?? "")}>
                     <SelectTrigger size="sm" className="w-44 rounded-[6px]">
                       <SelectValue placeholder="All Stores" />
                     </SelectTrigger>
@@ -440,7 +440,7 @@ export default function InventoryPage() {
                                         </div>
                                         <div className="space-y-1.5">
                                           <Label className="text-xs font-medium text-[#737373]">Volunteer</Label>
-                                          <Select value={spendVol} onValueChange={setSpendVol}>
+                                          <Select value={spendVol} onValueChange={(val) => setSpendVol(val ?? "")}>
                                             <SelectTrigger size="sm" className="rounded-[6px]">
                                               <SelectValue placeholder="Select volunteer" />
                                             </SelectTrigger>
@@ -491,7 +491,7 @@ export default function InventoryPage() {
                                         </div>
                                         <div className="space-y-1.5">
                                           <Label className="text-xs font-medium text-[#737373]">Volunteer</Label>
-                                          <Select value={donateVol} onValueChange={setDonateVol}>
+                                          <Select value={donateVol} onValueChange={(val) => setDonateVol(val ?? "")}>
                                             <SelectTrigger size="sm" className="rounded-[6px]">
                                               <SelectValue placeholder="Select volunteer" />
                                             </SelectTrigger>
@@ -639,7 +639,7 @@ export default function InventoryPage() {
               <div className="space-y-4">
                 <div className="space-y-1.5">
                   <Label className="text-xs font-medium text-[#737373]">Store</Label>
-                  <Select value={editStore} onValueChange={setEditStore}>
+                  <Select value={editStore} onValueChange={(val) => setEditStore(val ?? "")}>
                     <SelectTrigger className="rounded-[26px] bg-[rgba(229,229,229,0.3)] border-[#e5e5e5] h-9 text-sm text-[#737373]">
                       <SelectValue placeholder="Select store" />
                     </SelectTrigger>
