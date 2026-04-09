@@ -177,8 +177,8 @@ export default function DonationsPage() {
               {/* Card header */}
               <div className="flex items-center justify-between px-6 py-4 border-b border-[#e2e8f0]">
                 <div>
-                  <p className="text-sm font-semibold text-[#0a0a0a]">Donation Log</p>
-                  <p className="text-xs text-[#737373] mt-0.5">Filter and export donation records</p>
+                  <p className="text-[16px] font-medium text-[#404040]">Donation Log</p>
+                  <p className="text-[14px] text-[#737373] mt-0.5">Filter and export donation records</p>
                 </div>
                 <button
                   onClick={exportToCSV}
@@ -213,6 +213,7 @@ export default function DonationsPage() {
                   <Select value={filters.store} onValueChange={v => setFilters({ ...filters, store: v ?? "" })}>
                     <SelectTrigger
                       size="sm"
+                      triggerIcon={ArrowDown01Icon}
                       title={filters.store || undefined}
                       className="min-w-[134px] w-max max-w-[240px] rounded-[6px] bg-[#F1F5F9] border border-[#E2E8F0]"
                     >
