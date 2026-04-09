@@ -21,6 +21,18 @@ function formatFilterDate(iso: string) {
   return new Date(`${iso}T12:00:00`).toLocaleDateString()
 }
 
+/**
+ * Compact date filter styled like the donation log chips (border, slate fill, chevron).
+ * Uses a visually hidden native `<input type="date">` for the real value and calendar UI;
+ * the outer div is the click/keyboard target so we can show locale-formatted text in the shell.
+ * The input stays offscreen (`sr-only`) with `aria-hidden` to avoid duplicate announcements—
+ * screen readers use the wrapper’s `aria-label` instead.
+ *
+ * @param value - ISO date string `yyyy-mm-dd`, or empty when unset
+ * @param onChange - Called with the next ISO date string when the user picks a date
+ * @param placeholder - Visible label when empty (e.g. From / To)
+ * @param ariaLabel - Short name for assistive tech, combined with the value or placeholder
+ */
 function FilterDateField({
   value,
   onChange,
@@ -35,6 +47,7 @@ function FilterDateField({
   const inputRef = React.useRef<HTMLInputElement>(null)
   const hasValue = Boolean(value)
 
+  /** Opens the browser date picker where supported; otherwise focuses the input so the user can pick. */
   function openPicker() {
     const el = inputRef.current
     if (!el) return
