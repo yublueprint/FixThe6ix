@@ -13,8 +13,9 @@ import {
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { HugeiconsIcon } from "@hugeicons/react"
-import { DownloadIcon } from "@hugeicons/core-free-icons"
+import { ArrowLeft01Icon, ArrowLeftDoubleIcon, ArrowRight01Icon, ArrowRightDoubleIcon, DownloadIcon } from "@hugeicons/core-free-icons"
 import donationsData from "./data.json"
+import DonationsTable from "@/components/donations-table"
 
 // ── Page ─────────────────────────────────────────────────────────────────────
 
@@ -47,6 +48,16 @@ export default function DonationsPage() {
     })
     a.click(); URL.revokeObjectURL(url)
   }
+
+  const [currentPage, setCurrentPage] = React.useState(1);
+  const [rowsPerPage, setRowsPerPage] = React.useState(10);
+
+  const totalPages = Math.ceil(filteredData.length / rowsPerPage);
+
+  const paginatedData = filteredData.slice(
+    (currentPage - 1) * rowsPerPage,
+    currentPage * rowsPerPage
+  );
 
   return (
     <SidebarProvider>
@@ -148,53 +159,57 @@ export default function DonationsPage() {
                 </div>
               </div>
 
-              {/* Table */}
-              <div className="overflow-x-auto">
-              <Table>
-                <TableHeader>
-                  <TableRow className="bg-[#fafafa] hover:bg-[#fafafa]">
-                    <TableHead className="text-xs font-medium text-[#737373] py-3 pl-6">Date</TableHead>
-                    <TableHead className="text-xs font-medium text-[#737373] py-3">Store</TableHead>
-                    <TableHead className="text-xs font-medium text-[#737373] py-3">Amount</TableHead>
-                    <TableHead className="text-xs font-medium text-[#737373] py-3">Volunteer</TableHead>
-                    <TableHead className="text-xs font-medium text-[#737373] py-3">Recipient</TableHead>
-                    <TableHead className="text-xs font-medium text-[#737373] py-3">Notes</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {filteredData.length > 0 ? (
-                    filteredData.map(d => (
-                      <TableRow key={d.id} className="border-[#e2e8f0] hover:bg-[#fafafa]">
-                        <TableCell className="text-sm text-[#525252] py-3 pl-6">
-                          {new Date(d.date).toLocaleDateString()}
-                        </TableCell>
-                        <TableCell className="text-sm font-medium text-[#0a0a0a] py-3">{d.store}</TableCell>
-                        <TableCell className="py-3">
-                          <span className="bg-[#bbf7d0] text-[#166534] text-xs font-semibold px-2.5 py-1 rounded-full">
-                            ${d.amount}
-                          </span>
-                        </TableCell>
-                        <TableCell className="text-sm text-[#525252] py-3">{d.volunteer}</TableCell>
-                        <TableCell className="text-sm text-[#525252] py-3">{d.recipient}</TableCell>
-                        <TableCell className="text-sm text-[#a3a3a3] py-3">{d.notes}</TableCell>
-                      </TableRow>
-                    ))
-                  ) : (
-                    <TableRow>
-                      <TableCell colSpan={6} className="h-24 text-center text-[#737373] text-sm">
-                        No donations found matching your filters.
-                      </TableCell>
-                    </TableRow>
-                  )}
-                </TableBody>
-              </Table>
-              </div>{/* end overflow-x-auto */}
+              <DonationsTable filteredData={paginatedData}/>
 
               {/* Footer count */}
-              <div className="px-6 py-3 border-t border-[#e2e8f0]">
+              <div className="px-6 py-3 border-t border-[#e2e8f0] flex items-center justify-between">
                 <p className="text-xs text-[#737373]">
-                  Showing {filteredData.length} of {donationsData.length} donations
+                  Showing {paginatedData.length} of {filteredData.length} donations
                 </p>
+                <div className="text-xs flex items-center">
+                  Rows per page
+                  <div className="w-[10px]"/>
+                  <input
+                    type="number"
+                    value={rowsPerPage}
+                    onChange={(e) => {
+                      const value = Number(e.target.value) || 1;
+                      setRowsPerPage(value);
+                      setCurrentPage(1); // reset page
+                    }}
+                    className="border border-[#f0f0f0] rounded-[7px] w-[70px] p-2"
+                  />                  
+                  <div className="w-[10px]"/>
+                  Page {currentPage} of {totalPages}
+                  <div className="w-[10px]"/>
+                 <HugeiconsIcon
+                  onClick={() => setCurrentPage(1)}
+                  icon={ArrowLeftDoubleIcon}
+                  strokeWidth={2}
+                  className="size-7 text-[#a3a3a3] cursor-pointer border border-[#f0f0f0] rounded-[5px] p-2 m-[1px]"
+                />
+
+                <HugeiconsIcon
+                  onClick={() => setCurrentPage((p) => Math.max(1, p - 1))}
+                  icon={ArrowLeft01Icon}
+                  strokeWidth={2}
+                  className="size-7 text-[#a3a3a3] cursor-pointer border border-[#f0f0f0] rounded-[5px] p-2 m-[1px]"
+                />
+
+                <HugeiconsIcon
+                  onClick={() => setCurrentPage((p) => Math.min(totalPages, p + 1))}
+                  icon={ArrowRight01Icon}
+                  strokeWidth={2}
+                  className="size-7 text-[#a3a3a3] cursor-pointer border border-[#f0f0f0] rounded-[5px] p-2 m-[1px]"
+                />
+
+                <HugeiconsIcon
+                  onClick={() => setCurrentPage(totalPages)}
+                  icon={ArrowRightDoubleIcon}
+                  strokeWidth={2}
+                  className="size-7 text-[#a3a3a3] cursor-pointer border border-[#f0f0f0] rounded-[5px] p-2 m-[1px]"
+                />
+                </div>
               </div>
 
             </div>
