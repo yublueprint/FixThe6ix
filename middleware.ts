@@ -4,8 +4,8 @@ import { NextResponse } from "next/server";
 
 const { auth } = NextAuth(authConfig);
 
-const ADMIN_ONLY = ["/add-card", "/donations", "/redemption"];
-const PROTECTED  = ["/dashboard", "/add-card", "/donations", "/redemption"];
+const ADMIN_ONLY = ["/cards", "/add-card", "/donations", "/redemption"];
+const PROTECTED  = ["/dashboard", "/cards", "/add-card", "/donations", "/redemption"];
 
 export default auth((req) => {
   const pathname = req.nextUrl.pathname;
@@ -29,6 +29,7 @@ export default auth((req) => {
 export const config = {
   matcher: [
     "/dashboard/:path*",
+    "/cards/:path*",
     "/add-card/:path*",
     "/donations/:path*",
     "/redemption/:path*",
