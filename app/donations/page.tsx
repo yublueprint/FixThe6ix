@@ -11,11 +11,10 @@ import {
   Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
 } from "@/components/ui/select"
 import { Input } from "@/components/ui/input"
-import { Label } from "@/components/ui/label"
 import { HugeiconsIcon } from "@hugeicons/react"
-import { ArrowLeft01Icon, ArrowLeftDoubleIcon, ArrowRight01Icon, ArrowRightDoubleIcon, DownloadIcon } from "@hugeicons/core-free-icons"
+import { ArrowLeft01Icon, ArrowLeftDoubleIcon, ArrowRight01Icon, ArrowRightDoubleIcon, ArrowDown01Icon, Search01Icon, TradeUpIcon } from "@hugeicons/core-free-icons"
+import { cn } from "@/lib/utils"
 import donationsData from "./data.json"
-import DonationsTable from "@/components/donations-table"
 
 // ── Page ─────────────────────────────────────────────────────────────────────
 
@@ -78,23 +77,29 @@ export default function DonationsPage() {
 
             {/* ── Stats row ── */}
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-              <div className="border border-[#e2e8f0] rounded-[12px] p-5">
+              <div className="bg-[#F1F5F9] border border-[#E2E8F0] rounded-[16px] p-6">
                 <div className="flex items-center justify-between">
-                  <p className="text-xs font-medium text-[#737373]">Total Donations Distributed</p>
-                  <span className="text-xs bg-[#bbf7d0] text-[#166534] px-2 py-0.5 rounded-full font-medium">→ +12</span>
+                  <p className="text-sm font-normal text-[#737373]">Total Cards Donated</p>
+                  <span className="text-xs bg-[#bbf7d0] text-[#166534] px-2 py-0.5 rounded-full font-medium inline-flex items-center gap-1">
+                    <HugeiconsIcon icon={TradeUpIcon} strokeWidth={2} className="size-3" />
+                    +12
+                  </span>
                 </div>
-                <p className="text-[30px] font-semibold text-[#0a0a0a] mt-1 leading-none">{totalCount}</p>
-                <p className="text-xs text-[#737373] mt-2">Gift cards given to recipients</p>
+                <p className="text-[30px] font-semibold text-[#404040] mt-1 leading-none">{totalCount}</p>
+                <p className="text-sm text-[#737373] mt-2">Gift cards given to recipients</p>
               </div>
-              <div className="border border-[#e2e8f0] rounded-[12px] p-5">
+              <div className="bg-[#F1F5F9] border border-[#E2E8F0] rounded-[16px] p-6">
                 <div className="flex items-center justify-between">
-                  <p className="text-xs font-medium text-[#737373]">Total Dollar Value</p>
-                  <span className="text-xs bg-[#bbf7d0] text-[#166534] px-2 py-0.5 rounded-full font-medium">→ +12</span>
+                  <p className="text-sm font-normal text-[#737373]">Total Dollar Value</p>
+                  <span className="text-xs bg-[#bbf7d0] text-[#166534] px-2 py-0.5 rounded-full font-medium inline-flex items-center gap-1">
+                    <HugeiconsIcon icon={TradeUpIcon} strokeWidth={2} className="size-3" />
+                    +12
+                  </span>
                 </div>
-                <p className="text-[30px] font-semibold text-[#0a0a0a] mt-1 leading-none">
+                <p className="text-[30px] font-semibold text-[#404040] mt-1 leading-none">
                   ${totalValue.toLocaleString()}
                 </p>
-                <p className="text-xs text-[#737373] mt-2">Total value distributed to community</p>
+                <p className="text-sm text-[#737373] mt-2">Total value distributed to community</p>
               </div>
             </div>
 
@@ -104,42 +109,46 @@ export default function DonationsPage() {
               {/* Card header */}
               <div className="flex items-center justify-between px-6 py-4 border-b border-[#e2e8f0]">
                 <div>
-                  <p className="text-sm font-semibold text-[#0a0a0a]">Donation Log</p>
-                  <p className="text-xs text-[#737373] mt-0.5">Filter and export donation records</p>
+                  <p className="text-[16px] font-medium text-[#404040]">Donation Log</p>
+                  <p className="text-[14px] text-[#737373] mt-0.5">Filter and export donation records</p>
                 </div>
                 <button
                   onClick={exportToCSV}
                   className="bg-[#0a0a0a] text-white text-sm font-medium px-4 py-2 rounded-[6px] flex items-center gap-2 hover:bg-[#262626] transition-colors"
                 >
-                  <HugeiconsIcon icon={DownloadIcon} strokeWidth={2} className="size-4" />
+                  
                   Export CSV
                 </button>
               </div>
 
-              {/* Filters row */}
-              <div className="px-4 sm:px-6 py-4 grid grid-cols-2 sm:grid-cols-4 gap-3 border-b border-[#e2e8f0]">
-                <div className="space-y-1.5">
-                  <Label className="text-xs font-medium text-[#737373]">Start Date</Label>
-                  <Input
-                    type="date"
-                    value={filters.startDate}
-                    onChange={e => setFilters({ ...filters, startDate: e.target.value })}
-                    className="h-8 text-sm rounded-[6px]"
-                  />
+              {/* Filters row — dates share row width (max 264) so narrow viewports don’t overflow; store min 134px, grows to max 240px */}
+              <div className="px-4 sm:px-6 py-4 flex flex-wrap items-center gap-3 border-b border-[#e2e8f0]">
+                <div className="flex min-w-0 w-full max-w-[264px] gap-2">
+                  <div className="min-w-0 flex-1">
+                    <FilterDateField
+                      value={filters.startDate}
+                      onChange={next => setFilters({ ...filters, startDate: next })}
+                      placeholder="From"
+                      ariaLabel="From date"
+                    />
+                  </div>
+                  <div className="min-w-0 flex-1">
+                    <FilterDateField
+                      value={filters.endDate}
+                      onChange={next => setFilters({ ...filters, endDate: next })}
+                      placeholder="To"
+                      ariaLabel="To date"
+                    />
+                  </div>
                 </div>
-                <div className="space-y-1.5">
-                  <Label className="text-xs font-medium text-[#737373]">End Date</Label>
-                  <Input
-                    type="date"
-                    value={filters.endDate}
-                    onChange={e => setFilters({ ...filters, endDate: e.target.value })}
-                    className="h-8 text-sm rounded-[6px]"
-                  />
-                </div>
-                <div className="space-y-1.5">
-                  <Label className="text-xs font-medium text-[#737373]">Store</Label>
+                <div className="min-w-0 max-w-full shrink-0">
                   <Select value={filters.store} onValueChange={v => setFilters({ ...filters, store: v ?? "" })}>
-                    <SelectTrigger size="sm" className="rounded-[6px]">
+                    <SelectTrigger
+                      size="sm"
+                      triggerIcon={ArrowDown01Icon}
+                      title={filters.store || undefined}
+                      className="min-w-[134px] w-max max-w-[240px] rounded-[6px] bg-[#F1F5F9] border border-[#E2E8F0]"
+                    >
                       <SelectValue placeholder="All Stores" />
                     </SelectTrigger>
                     <SelectContent>
@@ -148,13 +157,18 @@ export default function DonationsPage() {
                     </SelectContent>
                   </Select>
                 </div>
-                <div className="space-y-1.5">
-                  <Label className="text-xs font-medium text-[#737373]">Recipient</Label>
+                <div className="relative min-w-0 w-full max-w-[400px] basis-full sm:basis-auto sm:ml-auto sm:w-[400px] sm:shrink-0">
+                  <HugeiconsIcon
+                    icon={Search01Icon}
+                    strokeWidth={2}
+                    className="pointer-events-none absolute left-2.5 top-1/2 size-4 -translate-y-1/2 text-[#737373]"
+                    aria-hidden
+                  />
                   <Input
                     placeholder="Search recipient..."
                     value={filters.recipient}
                     onChange={e => setFilters({ ...filters, recipient: e.target.value })}
-                    className="h-8 text-sm rounded-[6px]"
+                    className="h-8 w-full pl-8 text-sm rounded-[6px] border border-[#E2E8F0]"
                   />
                 </div>
               </div>
