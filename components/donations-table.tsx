@@ -48,7 +48,7 @@ const DonationsTable = ({filteredData}: {filteredData: any[]}) => {
             {filteredData.length > 0 ? (
             filteredData.map((d, i) => (
                 <TableRow key={d.id} className="border-[#e2e8f0] hover:bg-[#fafafa]">
-                    <TableCell><input type="checkbox" onChange={(e) => selectThisBox(i)} checked={selectedBoxes[i]}/></TableCell>
+                    <TableCell><input type="checkbox" onChange={(e) => selectThisBox(i)} checked={!!selectedBoxes[i]}/></TableCell>
                 <TableCell className="text-sm text-[#525252] py-3 pl-6">
                     {new Date(d.date).toLocaleDateString()}
                 </TableCell>

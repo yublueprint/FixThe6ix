@@ -15,6 +15,98 @@ import { HugeiconsIcon } from "@hugeicons/react"
 import { ArrowLeft01Icon, ArrowLeftDoubleIcon, ArrowRight01Icon, ArrowRightDoubleIcon, ArrowDown01Icon, Search01Icon, TradeUpIcon } from "@hugeicons/core-free-icons"
 import { cn } from "@/lib/utils"
 import donationsData from "./data.json"
+import DonationsTable from "@/components/donations-table"
+
+function formatFilterDate(iso: string) {
+  if (!iso) return ""
+  return new Date(`${iso}T12:00:00`).toLocaleDateString()
+}
+
+/**
+ * Compact date filter styled like the donation log chips (border, slate fill, chevron).
+ * Uses a visually hidden native `<input type="date">` for the real value and calendar UI;
+ * the outer div is the click/keyboard target so we can show locale-formatted text in the shell.
+ * The input stays offscreen (`sr-only`) with `aria-hidden` to avoid duplicate announcements—
+ * screen readers use the wrapper’s `aria-label` instead.
+ *
+ * @param value - ISO date string `yyyy-mm-dd`, or empty when unset
+ * @param onChange - Called with the next ISO date string when the user picks a date
+ * @param placeholder - Visible label when empty (e.g. From / To)
+ * @param ariaLabel - Short name for assistive tech, combined with the value or placeholder
+ */
+function FilterDateField({
+  value,
+  onChange,
+  placeholder,
+  ariaLabel,
+}: {
+  value: string
+  onChange: (next: string) => void
+  placeholder: string
+  ariaLabel: string
+}) {
+  const inputRef = React.useRef<HTMLInputElement>(null)
+  const hasValue = Boolean(value)
+
+  /** Opens the browser date picker where supported; otherwise focuses the input so the user can pick. */
+  function openPicker() {
+    const el = inputRef.current
+    if (!el) return
+    try {
+      el.showPicker()
+    } catch {
+      el.focus()
+    }
+  }
+
+  const a11yLabel = hasValue
+    ? `${ariaLabel}, ${formatFilterDate(value)}`
+    : `${ariaLabel}, ${placeholder}`
+
+  return (
+    <div
+      role="button"
+      tabIndex={0}
+      aria-label={a11yLabel}
+      onClick={openPicker}
+      onKeyDown={e => {
+        if (e.key === "Enter" || e.key === " ") {
+          e.preventDefault()
+          openPicker()
+        }
+      }}
+      className={cn(
+        "relative flex h-8 w-full cursor-pointer items-center gap-2 rounded-[6px] border border-[#E2E8F0] bg-[#F1F5F9] px-3 text-sm outline-none",
+        "focus-visible:border-ring focus-visible:ring-[3px] focus-visible:ring-ring/50",
+      )}
+    >
+      <input
+        ref={inputRef}
+        type="date"
+        value={value}
+        tabIndex={-1}
+        aria-hidden
+        onChange={e => onChange(e.target.value)}
+        className="sr-only"
+      />
+      <span
+        className={cn(
+          "pointer-events-none min-w-0 flex-1 whitespace-nowrap tabular-nums truncate",
+          hasValue ? "text-[#0a0a0a]" : "text-[#737373]",
+        )}
+        aria-hidden
+      >
+        {hasValue ? formatFilterDate(value) : placeholder}
+      </span>
+      <HugeiconsIcon
+        icon={ArrowDown01Icon}
+        strokeWidth={2}
+        className="pointer-events-none relative z-0 size-4 shrink-0 text-[#737373]"
+        aria-hidden
+      />
+    </div>
+  )
+}
 
 // ── Page ─────────────────────────────────────────────────────────────────────
 
