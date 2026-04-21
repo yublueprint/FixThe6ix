@@ -34,7 +34,7 @@ const data = {
     },
     {
       title: "Add Gift Card",
-      url: "/add-card",
+      url: "/cards",
       icon: <HugeiconsIcon icon={Add01Icon} strokeWidth={2} />,
     },
     {

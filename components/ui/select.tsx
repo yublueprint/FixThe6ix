@@ -32,10 +32,12 @@ function SelectValue({ className, ...props }: SelectPrimitive.Value.Props) {
 function SelectTrigger({
   className,
   size = "default",
+  triggerIcon = UnfoldMoreIcon,
   children,
   ...props
 }: SelectPrimitive.Trigger.Props & {
   size?: "sm" | "default"
+  triggerIcon?: React.ComponentProps<typeof HugeiconsIcon>["icon"]
 }) {
   return (
     <SelectPrimitive.Trigger
@@ -50,7 +52,7 @@ function SelectTrigger({
       {children}
       <SelectPrimitive.Icon
         render={
-          <HugeiconsIcon icon={UnfoldMoreIcon} strokeWidth={2} className="text-muted-foreground size-4 pointer-events-none" />
+          <HugeiconsIcon icon={triggerIcon} strokeWidth={2} className="text-muted-foreground size-4 pointer-events-none" />
         }
       />
     </SelectPrimitive.Trigger>

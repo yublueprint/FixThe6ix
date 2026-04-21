@@ -12,13 +12,20 @@ import {
 } from "@/components/ui/select"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
+import { Textarea } from "@/components/ui/textarea"
 import { Button } from "@/components/ui/button"
 import { Checkbox } from "@/components/ui/checkbox"
 import { HugeiconsIcon } from "@hugeicons/react"
 import {
   Search01Icon, ArrowDown01Icon, ArrowUp01Icon,
-  ShoppingBasket01Icon, GiveBloodIcon, Delete01Icon, Edit01Icon,
+ShoppingBasket01Icon, GiveBloodIcon, Delete01Icon, Edit01Icon
 } from "@hugeicons/core-free-icons"
+import { STORE_CATEGORIES } from "@/lib/treemap"
+import {
+  loadPersistedGiftCards,
+  upsertPersistedGiftCard,
+  type PersistedGiftCard,
+} from "@/lib/inventory-persistence"
 import rawData from "./data.json"
 
 // ── Types ─────────────────────────────────────────────────────────────────────
@@ -32,6 +39,7 @@ type GiftCard = {
   status: string
   addedDate: string
   addedBy: string
+  notes?: string
 }
 
 type Transaction = {
@@ -50,11 +58,17 @@ type DataStore = { cards: GiftCard[]; transactions: Transaction[] }
 // ── Constants ─────────────────────────────────────────────────────────────────
 
 const VOLUNTEERS = ["Sarah Johnson", "Mike Davis", "Lisa Chen", "James Lee", "Amy Brown"]
+const CATEGORIES = ["All", "Grocery", "Fast Food", "Clothing", "Other"]
+
+function categoryForStore(store: string) {
+  return STORE_CATEGORIES[store] ?? "Other"
+}
 
 function statusStyle(status: string) {
-  if (status === "Active") return "bg-[#bbf7d0] text-[#166534]"
-  if (status === "Used") return "bg-[#f5f5f5] text-[#525252]"
-  if (status === "Donated") return "bg-[#bfdbfe] text-[#1e40af]"
+  const normalized = status.toLowerCase()
+  if (normalized === "active") return "bg-[#bbf7d0] text-[#166534]"
+  if (normalized === "used" || normalized === "fully_redeemed") return "bg-[#f5f5f5] text-[#525252]"
+  if (normalized === "donated") return "bg-[#bfdbfe] text-[#1e40af]"
   return "bg-[#fef9c3] text-[#854d0e]"
 }
 
@@ -69,10 +83,19 @@ function fmt(iso: string) {
 
 export default function InventoryPage() {
   const [data, setData] = React.useState<DataStore>(rawData as DataStore)
-  const [searchStore, setSearchStore] = React.useState("")
-  const [searchLast4, setSearchLast4] = React.useState("")
+  const [filterStore, setFilterStore] = React.useState("All")
+  const [filterCategory, setFilterCategory] = React.useState("All")
+  const [searchQuery, setSearchQuery] = React.useState("")
   const [selectedId, setSelectedId] = React.useState<number | null>(null)
   const [selectedRows, setSelectedRows] = React.useState<number[]>([])
+
+  // Add gift card form
+  const [newStore, setNewStore] = React.useState("")
+  const [newLast4, setNewLast4] = React.useState("")
+  const [newInitialAmount, setNewInitialAmount] = React.useState("")
+  const [newNotes, setNewNotes] = React.useState("")
+  const [addErr, setAddErr] = React.useState("")
+  const [addSuccess, setAddSuccess] = React.useState("")
 
   // Spend form
   const [showSpend, setShowSpend] = React.useState(false)
@@ -100,12 +123,22 @@ export default function InventoryPage() {
   const uniqueStores = React.useMemo(() =>
     [...new Set(data.cards.map(c => c.store))].sort(), [data.cards])
 
+  const storeOptions = React.useMemo(() =>
+    [...new Set([...Object.keys(STORE_CATEGORIES), ...uniqueStores])].sort(), [uniqueStores])
+
   const filteredCards = React.useMemo(() =>
     data.cards.filter(c => {
-      if (searchStore && c.store !== searchStore) return false
-      if (searchLast4 && !c.last4.startsWith(searchLast4)) return false
+      if (filterStore !== "All" && c.store !== filterStore) return false
+      if (filterCategory !== "All" && categoryForStore(c.store) !== filterCategory) return false
+      if (searchQuery) {
+        const query = searchQuery.toLowerCase().trim()
+        const numericQuery = searchQuery.replace(/\D/g, "")
+        const byStore = c.store.toLowerCase().includes(query)
+        const byDigits = numericQuery.length > 0 && c.last4.includes(numericQuery)
+        if (!byStore && !byDigits) return false
+      }
       return true
-    }), [data.cards, searchStore, searchLast4])
+    }), [data.cards, filterStore, filterCategory, searchQuery])
 
   const selectedCard = data.cards.find(c => c.id === selectedId) ?? null
 
@@ -123,6 +156,61 @@ export default function InventoryPage() {
   const totalRemaining = statsCards.reduce((s, c) => s + c.remainingBalance, 0)
   const totalInitial = statsCards.reduce((s, c) => s + c.initialBalance, 0)
 
+  React.useEffect(() => {
+    const persisted = loadPersistedGiftCards() as GiftCard[]
+    if (persisted.length === 0) return
+
+    setData(prev => {
+      const prevKeys = new Set(prev.cards.map(c => `${c.store.toLowerCase()}::${c.last4}`))
+      const uniquePersisted = persisted.filter(c => !prevKeys.has(`${c.store.toLowerCase()}::${c.last4}`))
+      if (uniquePersisted.length === 0) return prev
+      return { ...prev, cards: [...uniquePersisted, ...prev.cards] }
+    })
+  }, [])
+
+  function handleAddGiftCard() {
+    setAddErr("")
+    setAddSuccess("")
+
+    const store = newStore.trim()
+    const last4 = newLast4.replace(/\D/g, "")
+    const initialAmount = Number(Number(newInitialAmount).toFixed(2))
+
+    if (!store) { setAddErr("Please select a store."); return }
+    if (last4.length !== 4) { setAddErr("Last 4 digits must be exactly 4 numbers."); return }
+    if (!newInitialAmount || isNaN(initialAmount) || initialAmount <= 0) {
+      setAddErr("Please enter a valid initial amount."); return
+    }
+
+    const duplicate = data.cards.some(c => c.store === store && c.last4 === last4)
+    if (duplicate) {
+      setAddErr("A card for this store with the same last 4 digits already exists.")
+      return
+    }
+
+    const nextId = Math.max(0, ...data.cards.map(c => c.id)) + 1
+    const createdCard: GiftCard = {
+      id: nextId,
+      store,
+      last4,
+      initialBalance: initialAmount,
+      remainingBalance: initialAmount,
+      status: "Active",
+      addedDate: new Date().toISOString(),
+      addedBy: "Admin",
+      notes: newNotes.trim() || undefined,
+    }
+
+    upsertPersistedGiftCard(createdCard as PersistedGiftCard)
+    setData(d => ({ ...d, cards: [createdCard, ...d.cards] }))
+    setSelectedId(createdCard.id)
+    setNewStore("")
+    setNewLast4("")
+    setNewInitialAmount("")
+    setNewNotes("")
+    setAddSuccess("Gift card added successfully.")
+  }
+
   function selectCard(id: number) {
     if (selectedId === id) {
       setSelectedId(null)
@@ -132,50 +220,6 @@ export default function InventoryPage() {
       setSpendAmt(""); setSpendVol(""); setSpendNotes(""); setSpendErr("")
       setDonateAmt(""); setDonateRecip(""); setDonateVol(""); setDonateNotes("")
       setDonateErr(""); setDonateFull(true)
-    }
-  }
-
-  function deleteCard(id: number) {
-    if (confirm("Are you sure you want to delete this gift card?")) {
-      setData(d => ({
-        cards: d.cards.filter(c => c.id !== id),
-        transactions: d.transactions.filter(t => t.cardId !== id)
-      }));
-      if (selectedId === id) setSelectedId(null);
-    }
-  }
-
-  function openEditCard(id: number) {
-    const card = data.cards.find(c => c.id === id);
-    if (card) {
-      setEditCardId(id);
-      setEditStore(card.store);
-      setEditInitialBalance(card.initialBalance.toString());
-      setEditRemainingBalance(card.remainingBalance.toString());
-      setShowEditSheet(true);
-    }
-  }
-
-  function saveEditCard() {
-    if (!editCardId) return;
-    const initial = parseFloat(editInitialBalance);
-    const remaining = parseFloat(editRemainingBalance);
-    if (isNaN(initial) || isNaN(remaining) || initial < 0 || remaining < 0 || remaining > initial) {
-      alert("Invalid balances");
-      return;
-    }
-    if (confirm("Are you sure you want to save these changes?")) {
-      setData(d => ({
-        ...d,
-        cards: d.cards.map(c => c.id === editCardId ? {
-          ...c,
-          store: editStore,
-          initialBalance: initial,
-          remainingBalance: remaining,
-          status: remaining === 0 ? "Used" : c.status
-        } : c)
-      }));
-      setShowEditSheet(false);
     }
   }
 
@@ -228,6 +272,50 @@ export default function InventoryPage() {
     setDonateAmt(""); setDonateRecip(""); setDonateVol(""); setDonateNotes(""); setDonateFull(true)
   }
 
+  function deleteCard(id: number) {
+    if (confirm("Are you sure you want to delete this gift card?")) {
+      setData(d => ({
+        cards: d.cards.filter(c => c.id !== id),
+        transactions: d.transactions.filter(t => t.cardId !== id)
+      }));
+      if (selectedId === id) setSelectedId(null);
+    }
+  }
+
+  function openEditCard(id: number) {
+    const card = data.cards.find(c => c.id === id);
+    if (card) {
+      setEditCardId(id);
+      setEditStore(card.store);
+      setEditInitialBalance(card.initialBalance.toString());
+      setEditRemainingBalance(card.remainingBalance.toString());
+      setShowEditSheet(true);
+    }
+  }
+
+  function saveEditCard() {
+    if (!editCardId) return;
+    const initial = parseFloat(editInitialBalance);
+    const remaining = parseFloat(editRemainingBalance);
+    if (isNaN(initial) || isNaN(remaining) || initial < 0 || remaining < 0 || remaining > initial) {
+      alert("Invalid balances");
+      return;
+    }
+    if (confirm("Are you sure you want to save these changes?")) {
+      setData(d => ({
+        ...d,
+        cards: d.cards.map(c => c.id === editCardId ? {
+          ...c,
+          store: editStore,
+          initialBalance: initial,
+          remainingBalance: remaining,
+          status: remaining === 0 ? "Used" : c.status
+        } : c)
+      }));
+      setShowEditSheet(false);
+    }
+  }
+
   return (
     <SidebarProvider>
       <AppSidebar variant="inset" />
@@ -253,12 +341,76 @@ export default function InventoryPage() {
                 { label: "Total Remaining", value: `$${totalRemaining.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`, sub: selectedRows.length > 0 ? "Available in selected cards" : "Available across all cards" },
                 { label: "Total Initial", value: `$${totalInitial.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`, sub: selectedRows.length > 0 ? "Value of selected cards" : "Value of all cards received" },
               ].map(s => (
-                <div key={s.label} className="bg-[#F1F5F9] border border-[#e2e8f0] rounded-[12px] p-5">
+                <div key={s.label} className="border border-[#e2e8f0] rounded-[12px] p-5">
                   <p className="text-xs font-medium text-[#737373]">{s.label}</p>
                   <p className="text-[30px] font-semibold text-[#0a0a0a] mt-1 leading-none">{s.value}</p>
                   <p className="text-xs text-[#737373] mt-2">{s.sub}</p>
                 </div>
               ))}
+            </div>
+
+            {/* ── Add Gift Card ── */}
+            <div className="bg-white border border-[#e2e8f0] rounded-[12px] p-5">
+              <div className="mb-4">
+                <p className="text-sm font-semibold text-[#0a0a0a]">Add Gift Card</p>
+                <p className="text-xs text-[#737373] mt-0.5">Create a new card entry for inventory tracking.</p>
+              </div>
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
+                <div className="space-y-1.5">
+                  <Label className="text-xs font-medium text-[#737373]">Store</Label>
+                  <Input
+                    list="store-options"
+                    placeholder="Search store"
+                    value={newStore}
+                    onChange={e => setNewStore(e.target.value)}
+                    className="h-8 text-sm rounded-[6px]"
+                  />
+                  <datalist id="store-options">
+                    {storeOptions.map(store => <option key={store} value={store} />)}
+                  </datalist>
+                </div>
+                <div className="space-y-1.5">
+                  <Label className="text-xs font-medium text-[#737373]">Last 4 digits</Label>
+                  <Input
+                    inputMode="numeric"
+                    placeholder="0000"
+                    value={newLast4}
+                    onChange={e => setNewLast4(e.target.value.replace(/\D/g, "").slice(0, 4))}
+                    className="h-8 text-sm rounded-[6px]"
+                  />
+                </div>
+                <div className="space-y-1.5">
+                  <Label className="text-xs font-medium text-[#737373]">Initial amount ($)</Label>
+                  <Input
+                    type="number"
+                    min="0.01"
+                    step="0.01"
+                    placeholder="0.00"
+                    value={newInitialAmount}
+                    onChange={e => setNewInitialAmount(e.target.value)}
+                    className="h-8 text-sm rounded-[6px]"
+                  />
+                </div>
+                <div className="space-y-1.5">
+                  <Label className="text-xs font-medium text-[#737373]">Optional notes</Label>
+                  <Textarea
+                    placeholder="Any context for this card"
+                    value={newNotes}
+                    onChange={e => setNewNotes(e.target.value)}
+                    className="min-h-8 h-8 text-sm rounded-[6px] py-1.5"
+                  />
+                </div>
+              </div>
+              {addErr && <p className="text-xs text-red-500 mt-3">{addErr}</p>}
+              {addSuccess && <p className="text-xs text-[#166534] mt-3">{addSuccess}</p>}
+              <div className="flex items-center gap-2 mt-4">
+                <button
+                  onClick={handleAddGiftCard}
+                  className="text-sm font-medium bg-[#0a0a0a] text-white px-3.5 py-1.5 rounded-[6px] hover:bg-[#262626] transition-colors"
+                >
+                  Add Gift Card
+                </button>
+              </div>
             </div>
 
             {/* ── Inventory card ── */}
@@ -273,24 +425,33 @@ export default function InventoryPage() {
                   </div>
                   <p className="text-xs text-[#737373]">{filteredCards.length} of {data.cards.length} cards</p>
                 </div>
-                <div className="flex gap-3">
-                  <Select value={searchStore} onValueChange={(val) => setSearchStore(val ?? "")}>
+                <div className="flex gap-3 flex-wrap">
+                  <Select value={filterStore} onValueChange={(value) => setFilterStore(value ?? "All")}>
                     <SelectTrigger size="sm" className="w-44 rounded-[6px]">
-                      <SelectValue placeholder="All Stores" />
+                      <SelectValue placeholder="Filter by store" />
                     </SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="">All Stores</SelectItem>
+                      <SelectItem value="All">All Stores</SelectItem>
                       {uniqueStores.map(s => <SelectItem key={s} value={s}>{s}</SelectItem>)}
                     </SelectContent>
                   </Select>
+
+                  <Select value={filterCategory} onValueChange={(value) => setFilterCategory(value ?? "All")}>
+                    <SelectTrigger size="sm" className="w-44 rounded-[6px]">
+                      <SelectValue placeholder="Filter by category" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {CATEGORIES.map(category => <SelectItem key={category} value={category}>{category}</SelectItem>)}
+                    </SelectContent>
+                  </Select>
+
                   <div className="relative">
                     <HugeiconsIcon icon={Search01Icon} strokeWidth={1.5} className="absolute left-2.5 top-1/2 -translate-y-1/2 size-3.5 text-[#a3a3a3] pointer-events-none" />
                     <Input
-                      placeholder="Last 4 digits…"
-                      maxLength={4}
-                      value={searchLast4}
-                      onChange={e => setSearchLast4(e.target.value.replace(/\D/g, ""))}
-                      className="h-8 pl-8 text-sm rounded-[6px] w-36"
+                      placeholder="Search store or last 4"
+                      value={searchQuery}
+                      onChange={e => setSearchQuery(e.target.value)}
+                      className="h-8 pl-8 text-sm rounded-[6px] w-52"
                     />
                   </div>
                 </div>
@@ -440,7 +601,7 @@ export default function InventoryPage() {
                                         </div>
                                         <div className="space-y-1.5">
                                           <Label className="text-xs font-medium text-[#737373]">Volunteer</Label>
-                                          <Select value={spendVol} onValueChange={(val) => setSpendVol(val ?? "")}>
+                                          <Select value={spendVol} onValueChange={(value) => setSpendVol(value ?? "")}>
                                             <SelectTrigger size="sm" className="rounded-[6px]">
                                               <SelectValue placeholder="Select volunteer" />
                                             </SelectTrigger>
@@ -491,7 +652,7 @@ export default function InventoryPage() {
                                         </div>
                                         <div className="space-y-1.5">
                                           <Label className="text-xs font-medium text-[#737373]">Volunteer</Label>
-                                          <Select value={donateVol} onValueChange={(val) => setDonateVol(val ?? "")}>
+                                          <Select value={donateVol} onValueChange={(value) => setDonateVol(value ?? "")}>
                                             <SelectTrigger size="sm" className="rounded-[6px]">
                                               <SelectValue placeholder="Select volunteer" />
                                             </SelectTrigger>

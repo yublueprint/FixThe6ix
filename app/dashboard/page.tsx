@@ -106,7 +106,8 @@ export default function HomePage() {
       }))
   }, [filteredByCategory])
 
-  function handleCategoryChange(cat: string) {
+  function handleCategoryChange(cat: string | null) {
+    if (!cat) return
     setActiveCategory(cat)
     setSearchQuery("")
     setPage(1)
@@ -134,10 +135,10 @@ export default function HomePage() {
               <p className="text-base font-medium text-[#525252]">Quick Actions</p>
               <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
                 {([
-                  { href: "/add-card",    icon: Add01Icon,           label: "Add Gift Cards",   desc: "Active cards" },
-                  { href: "/redemption",  icon: ShoppingBasket01Icon, label: "Record Spend",     desc: "Log a purchase made with a gift card" },
+                  { href: "/cards",       icon: Add01Icon,           label: "Add Gift Cards",   desc: "Active cards" },
+                  { href: "/inventory",   icon: ShoppingBasket01Icon, label: "Record Spend",     desc: "Log a purchase made with a gift card" },
                   { href: "/donations",   icon: GiveBloodIcon,        label: "Record Donation",  desc: "Give a card to a recipient in need" },
-                  { href: "/redemption",  icon: Archive01Icon,        label: "View Inventory",   desc: "Browse all cards by store and category" },
+                  { href: "/inventory",   icon: Archive01Icon,        label: "View Inventory",   desc: "Browse all cards by store and category" },
                 ] as const).map(({ href, icon, label, desc }) => (
                   <Link key={label} href={href} className="block h-full">
                     <div className="h-full bg-[#fafafa] rounded-[18px] shadow-[0px_0px_0px_1px_rgba(10,10,10,0.1),0px_1px_2px_0px_rgba(0,0,0,0.05)] pt-8 sm:pt-[58px] pb-6 px-6 flex flex-col gap-2 hover:bg-[#f0f0f0] transition-colors cursor-pointer">
@@ -224,7 +225,7 @@ export default function HomePage() {
                         data={treemapData}
                         dataKey="size"
                         aspectRatio={16 / 9}
-                        content={(props) => <TreemapCell {...props} />}
+                        content={<TreemapCell />}
                       >
                         <Tooltip
                           content={({ active, payload }) => {
