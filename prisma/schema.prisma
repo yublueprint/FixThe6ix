@@ -115,7 +115,7 @@ model VerificationToken {
   @@unique([identifier, token])
 }
 
-// Dev B — ImportStaging contract (add when staging model exists):
+// Meet — ImportStaging contract (add when staging model exists):
 // - batchId String @map("batch_id")  →  FK to ImportBatch.id
 // - batch   ImportBatch @relation(fields: [batchId], references: [id], onDelete: Restrict)
 // - ImportBatch: add importStagings ImportStaging[]
