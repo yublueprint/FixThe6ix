@@ -114,3 +114,27 @@ model VerificationToken {
 
   @@unique([identifier, token])
 }
+
+// Dev B — ImportStaging contract (add when staging model exists):
+// - batchId String @map("batch_id")  →  FK to ImportBatch.id
+// - batch   ImportBatch @relation(fields: [batchId], references: [id], onDelete: Restrict)
+// - ImportBatch: add importStagings ImportStaging[]
+// ImportBatch.id is a UUID string (TEXT), same pattern as Store / GiftCard.
+
+model ImportBatch {
+  id           String   @id @default(uuid())
+  fileName     String   @map("file_name")
+  /// Allowed values enforced in DB: pending | processing | completed | failed
+  status       String   @default("pending")
+  rowCount     Int?     @map("row_count")
+  successCount Int?     @map("success_count")
+  errorCount   Int?     @map("error_count")
+  errorSummary String?  @map("error_summary") @db.Text
+  metadata     Json     @default("{}")
+  createdAt    DateTime @default(now()) @map("created_at")
+  updatedAt    DateTime @updatedAt @map("updated_at")
+
+  @@index([status])
+  @@index([createdAt])
+  @@map("import_batches")
+}
