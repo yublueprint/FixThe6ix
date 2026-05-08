@@ -1,6 +1,5 @@
 import { PrismaClient, StoreCategory, GiftCardStatus, TransactionType, UserRole } from "@prisma/client";
 import { PrismaPg } from "@prisma/adapter-pg";
-import bcrypt from "bcryptjs";
 
 const databaseUrl = process.env.DATABASE_URL;
 if (!databaseUrl) {
@@ -106,19 +105,6 @@ function daysAgo(n: number): Date {
 
 async function main() {
   console.log("Seeding database...");
-
-  // Users
-  const hashedPassword = await bcrypt.hash("password123", 10);
-
-await prisma.user.createMany({
-  data: [
-    { email: "admin@example.com",      name: "Admin User",      password: hashedPassword, role: UserRole.ADMIN },
-    { email: "volunteer1@example.com", name: "Sarah Johnson",   password: hashedPassword, role: UserRole.VOLUNTEER },
-    { email: "volunteer2@example.com", name: "Mike Davis",      password: hashedPassword, role: UserRole.VOLUNTEER },
-    { email: "volunteer3@example.com", name: "Emily Rodriguez", password: hashedPassword, role: UserRole.VOLUNTEER },
-  ],
-  skipDuplicates: true,
-});
 
   // Stores
   const storeRecords = await Promise.all(
