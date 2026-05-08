@@ -194,14 +194,105 @@ export default function AddCardPage() {
     reader.readAsText(file)
   }
 
-  function handleCSVImport(includeAll: boolean) {
-    const toImport = csvRows.filter(r => includeAll ? r.status !== "error" : r.status === "valid")
-    setAddedCards(prev => [...prev, ...toImport.map((r, i) => ({
-      id: Date.now() + i, store: r.store, last4: r.last4,
-      amount: r.amount, dateAdded: today, addedBy: r.addedBy, notes: r.notes,
-    }))])
-    setImportedCount(toImport.length); setCsvImportDone(true)
+type NormalizedRow = {
+  store: string
+  last4: string
+  amount: number
+  dateAdded: Date | null
+  addedBy: string
+  notes: string
+}
+
+function normalizeAndValidateRow(r: any) {
+  const errors: string[] = []
+
+  // --- normalize ---
+  const store = r.store?.trim() || ""
+
+  const last4Raw = String(r.last4 ?? "").replace(/\D/g, "")
+  const last4 = last4Raw.slice(-4)
+
+  const amountParsed = parseFloat(
+    String(r.amount).replace(/[^0-9.-]+/g, "")
+  )
+
+  const amount = isNaN(amountParsed) ? NaN : amountParsed
+
+  const dateAdded = r.dateAdded ? new Date(r.dateAdded) : null
+
+  const addedBy = r.addedBy?.trim() || ""
+  const notes = r.notes?.trim() || ""
+
+  // --- validation ---
+  if (!store) errors.push("Missing store")
+
+  if (last4.length !== 4) {
+    errors.push("Invalid last4 (must be 4 digits)")
   }
+
+  if (isNaN(amount)) {
+    errors.push("Invalid amount")
+  } else if (amount <= 0) {
+    errors.push("Amount must be > 0")
+  }
+
+  if (dateAdded && isNaN(dateAdded.getTime())) {
+    errors.push("Invalid date")
+  }
+
+  if (!addedBy) {
+    errors.push("Missing addedBy")
+  }
+
+  const normalized: NormalizedRow = {
+    store,
+    last4,
+    amount: isNaN(amount) ? 0 : amount, // safe fallback
+    dateAdded,
+    addedBy,
+    notes,
+  }
+
+  return {
+    data: normalized,
+    errors,
+    status: errors.length ? "error" : "valid",
+  }
+}
+
+function handleCSVImport(includeAll: boolean) {
+  const processedRows = csvRows.map(normalizeAndValidateRow)
+
+  const toImport = processedRows.filter(r =>
+    includeAll ? r.status !== "error" : r.status === "valid"
+  )
+
+  // extract valid data only
+  const validData = toImport.map(r => r.data)
+
+  setAddedCards(prev => [
+    ...prev,
+    ...validData.map((r, i) => ({
+      id: Date.now() + i,
+      store: r.store,
+      last4: r.last4,
+      amount: r.amount.toFixed(2),
+      dateAdded: r.dateAdded ? r.dateAdded.toISOString().slice(0, 10) : today,
+      addedBy: r.addedBy,
+      notes: r.notes,
+    }))
+  ])
+
+  // --- summary ---
+  const inserted = validData.length
+  const failed = processedRows.filter(r => r.status === "error").length
+
+  setImportedCount(inserted)
+  setCsvImportDone(true)
+
+  // OPTIONAL: store errors for UI display
+  console.log("Row Errors:", processedRows.filter(r => r.errors.length))
+}
 
   function downloadTemplate() {
     const blob = new Blob([CSV_TEMPLATE], { type: "text/csv" })
