@@ -133,8 +133,46 @@ model ImportBatch {
   metadata     Json     @default("{}")
   createdAt    DateTime @default(now()) @map("created_at")
   updatedAt    DateTime @updatedAt @map("updated_at")
-
+  importStagings ImportStaging[]
   @@index([status])
   @@index([createdAt])
   @@map("import_batches")
+}
+
+model ImportStaging {
+  id             String      @id @default(uuid())
+  batchId        String      @map("batch_id")
+  batch          ImportBatch @relation(fields: [batchId], references: [id], onDelete: Restrict)
+
+  // Raw CSV columns (stored as-is from the file)
+  rawStore       String    @map("raw_store")
+  rawLast4       String    @map("raw_last4")
+  rawAmount      String    @map("raw_amount")
+  rawNotes       String?   @map("raw_notes")
+  rawAddedBy     String?   @map("raw_added_by")
+  rawDateAdded   String?   @map("raw_date_added")
+
+  rowNumber      Int       @map("row_number")
+
+  // Validation
+  status           String  @default("pending")
+  validationErrors Json?   @map("validation_errors")
+
+  // Resolved values (populated after validation)
+  resolvedStoreId   String?   @map("resolved_store_id")
+  resolvedLast4     String?   @map("resolved_last4")
+  resolvedAmount    Decimal?  @map("resolved_amount") @db.Decimal(10, 2)
+  resolvedDateAdded DateTime? @map("resolved_date_added")
+
+  // Promotion tracking
+  promotedCardId String?   @map("promoted_card_id")
+  promotedAt     DateTime? @map("promoted_at")
+
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  @@index([batchId])
+  @@index([status])
+  @@index([batchId, status])
+  @@map("import_staging")
 }
