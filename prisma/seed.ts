@@ -1,4 +1,11 @@
-import { PrismaClient, StoreCategory, GiftCardStatus, TransactionType, UserRole } from "@prisma/client";
+import {
+  Prisma,
+  PrismaClient,
+  StoreCategory,
+  GiftCardStatus,
+  TransactionType,
+  UserRole,
+} from "@prisma/client";
 import { PrismaPg } from "@prisma/adapter-pg";
 
 const databaseUrl = process.env.DATABASE_URL;
@@ -100,11 +107,182 @@ function daysAgo(n: number): Date {
 }
 
 // ---------------------------------------------------------------------------
+// CSV import tables — smoke seed (import_batches + import_staging)
+// ---------------------------------------------------------------------------
+//
+// Docs for anyone running `npx prisma db seed`:
+// - Requires migrations applied first (`migrate deploy` / `migrate dev`) so
+//   `import_batches` and `import_staging` exist.
+// - Uses fixed UUID strings so re-running seed does not duplicate demo rows.
+// - `import_batches.status` is CHECK-constrained in DB to: pending | processing |
+//   completed | failed. Staging `status` has no DB CHECK in the current migration.
+// - This block is independent of the gift-card demo data above.
+
+const SEED_IMPORT_BATCH_ID = "00000000-0000-4000-8000-0000000000b1";
+const SEED_IMPORT_STAGING_ROW_1_ID = "00000000-0000-4000-8000-000000000c01";
+const SEED_IMPORT_STAGING_ROW_2_ID = "00000000-0000-4000-8000-000000000c02";
+
+/**
+ * Upserts demo CSV import batch + staging rows and logs verification output.
+ * Optional `timHortonsStoreId` sets `resolvedStoreId` on row 1 when that store exists.
+ */
+async function seedImportPipelineDemo(timHortonsStoreId: string | undefined) {
+  await prisma.importBatch.upsert({
+    where: { id: SEED_IMPORT_BATCH_ID },
+    update: {
+      fileName: "seed-demo-import.csv",
+      status: "completed",
+      rowCount: 2,
+      successCount: 1,
+      errorCount: 1,
+      errorSummary: "Seed: one synthetic invalid row (see staging row 2).",
+      metadata: {
+        source: "prisma/seed.ts",
+        purpose: "import_batches + import_staging smoke test",
+      },
+    },
+    create: {
+      id: SEED_IMPORT_BATCH_ID,
+      fileName: "seed-demo-import.csv",
+      status: "completed",
+      rowCount: 2,
+      successCount: 1,
+      errorCount: 1,
+      errorSummary: "Seed: one synthetic invalid row (see staging row 2).",
+      metadata: {
+        source: "prisma/seed.ts",
+        purpose: "import_batches + import_staging smoke test",
+      },
+    },
+  });
+
+  await prisma.importStaging.upsert({
+    where: { id: SEED_IMPORT_STAGING_ROW_1_ID },
+    update: {
+      batchId: SEED_IMPORT_BATCH_ID,
+      rawStore: "Tim Hortons",
+      rawLast4: "9999",
+      rawAmount: "50.00",
+      rawNotes: "Seed row 1 — pending",
+      rawAddedBy: "seed.ts",
+      rawDateAdded: "2026-01-15",
+      rowNumber: 1,
+      status: "pending",
+      validationErrors: Prisma.DbNull,
+      resolvedStoreId: timHortonsStoreId ?? null,
+      resolvedLast4: timHortonsStoreId ? "9999" : null,
+      resolvedAmount: timHortonsStoreId ? 50 : null,
+      resolvedDateAdded: timHortonsStoreId ? new Date("2026-01-15T12:00:00.000Z") : null,
+      promotedCardId: null,
+      promotedAt: null,
+    },
+    create: {
+      id: SEED_IMPORT_STAGING_ROW_1_ID,
+      batchId: SEED_IMPORT_BATCH_ID,
+      rawStore: "Tim Hortons",
+      rawLast4: "9999",
+      rawAmount: "50.00",
+      rawNotes: "Seed row 1 — pending",
+      rawAddedBy: "seed.ts",
+      rawDateAdded: "2026-01-15",
+      rowNumber: 1,
+      status: "pending",
+      validationErrors: Prisma.DbNull,
+      resolvedStoreId: timHortonsStoreId ?? null,
+      resolvedLast4: timHortonsStoreId ? "9999" : null,
+      resolvedAmount: timHortonsStoreId ? 50 : null,
+      resolvedDateAdded: timHortonsStoreId ? new Date("2026-01-15T12:00:00.000Z") : null,
+      promotedCardId: null,
+      promotedAt: null,
+    },
+  });
+
+  await prisma.importStaging.upsert({
+    where: { id: SEED_IMPORT_STAGING_ROW_2_ID },
+    update: {
+      batchId: SEED_IMPORT_BATCH_ID,
+      rawStore: "Unknown Store XYZ",
+      rawLast4: "abcd",
+      rawAmount: "not-a-number",
+      rawNotes: "Seed row 2 — synthetic validation failure",
+      rawAddedBy: "seed.ts",
+      rawDateAdded: "2026-01-16",
+      rowNumber: 2,
+      status: "invalid",
+      validationErrors: [
+        { code: "SEED_DEMO", message: "Synthetic validation error for import_staging smoke test." },
+      ],
+      resolvedStoreId: null,
+      resolvedLast4: null,
+      resolvedAmount: null,
+      resolvedDateAdded: null,
+      promotedCardId: null,
+      promotedAt: null,
+    },
+    create: {
+      id: SEED_IMPORT_STAGING_ROW_2_ID,
+      batchId: SEED_IMPORT_BATCH_ID,
+      rawStore: "Unknown Store XYZ",
+      rawLast4: "abcd",
+      rawAmount: "not-a-number",
+      rawNotes: "Seed row 2 — synthetic validation failure",
+      rawAddedBy: "seed.ts",
+      rawDateAdded: "2026-01-16",
+      rowNumber: 2,
+      status: "invalid",
+      validationErrors: [
+        { code: "SEED_DEMO", message: "Synthetic validation error for import_staging smoke test." },
+      ],
+      resolvedStoreId: null,
+      resolvedLast4: null,
+      resolvedAmount: null,
+      resolvedDateAdded: null,
+      promotedCardId: null,
+      promotedAt: null,
+    },
+  });
+
+  const batchCount = await prisma.importBatch.count();
+  const stagingCount = await prisma.importStaging.count();
+  const stagingForBatch = await prisma.importStaging.findMany({
+    where: { batchId: SEED_IMPORT_BATCH_ID },
+    orderBy: { rowNumber: "asc" },
+    select: {
+      id: true,
+      rowNumber: true,
+      status: true,
+      rawStore: true,
+      batchId: true,
+    },
+  });
+
+  console.log(
+    `import_batches: ${batchCount} total rows (demo batch id=${SEED_IMPORT_BATCH_ID}). import_staging: ${stagingCount} total rows.`
+  );
+  console.log("import_staging rows for demo batch:", JSON.stringify(stagingForBatch, null, 2));
+
+  const badFile = `__seed_check_${Date.now()}__`;
+  const badStatus = "not-a-real-status";
+  try {
+    await prisma.$executeRaw(
+      Prisma.sql`INSERT INTO import_batches (id, file_name, status, metadata, created_at, updated_at) VALUES (gen_random_uuid()::text, ${badFile}, ${badStatus}, '{}'::jsonb, NOW(), NOW())`
+    );
+    console.warn(
+      "import_batches: WARNING — invalid status was accepted. Is import_batches_status_check missing from this database?"
+    );
+  } catch {
+    console.log("import_batches: status CHECK rejected invalid value (expected).");
+  }
+}
+
+// ---------------------------------------------------------------------------
 // Seed
 // ---------------------------------------------------------------------------
 
 async function main() {
   console.log("Seeding database...");
+  // Order: reference data (stores, cards) first, then import pipeline smoke data
+  // (requires import_* migrations on DATABASE_URL).
 
   // Stores
   const storeRecords = await Promise.all(
@@ -860,6 +1038,17 @@ async function main() {
   }
 
   console.log(`Upserted ${cardCount} gift cards and ${txCount} transactions.`);
+
+  const timHortons = storeRecords.find((s) => s.name === "Tim Hortons");
+  try {
+    await seedImportPipelineDemo(timHortons?.id);
+  } catch (e) {
+    console.warn(
+      "CSV import demo seed failed or was skipped — ensure migrations for `import_batches` / `import_staging` are applied, then re-run `npx prisma db seed`.",
+      e
+    );
+  }
+
   console.log("Seeding complete.");
 }
 
