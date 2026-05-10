@@ -147,6 +147,11 @@ export default function AddCardPage() {
   const [csvImportDone, setCsvImportDone] = useState(false)
   const [importedCount, setImportedCount] = useState(0)
   const [isDragging, setIsDragging] = useState(false)
+  const [importSummary, setImportSummary] = useState<{
+    inserted: number
+    updated: number
+    failed: { line: number; errors: string[] }[]
+  } | null>(null)
   const fileInputRef = useRef<HTMLInputElement>(null)
 
   const allCards = useMemo(() => [
@@ -190,7 +195,25 @@ export default function AddCardPage() {
     if (!file.name.endsWith(".csv")) return
     setCsvFileName(file.name); setCsvImportDone(false)
     const reader = new FileReader()
-    reader.onload = e => setCsvRows(parseCSV(e.target?.result as string))
+    reader.onload = e => {
+      const rows = parseCSV(e.target?.result as string)
+      // Count occurrences of each key
+      const keyCount = new Map<string, number>()
+      rows.forEach(row => {
+        if (row.status === "error") return
+        const key = `${row.store.toLowerCase()}::${row.last4}`
+        keyCount.set(key, (keyCount.get(key) || 0) + 1)
+      })
+      // Mark all duplicates (within CSV) as duplicate
+      rows.forEach(row => {
+        if (row.status === "error") return
+        const key = `${row.store.toLowerCase()}::${row.last4}`
+        if (keyCount.get(key)! > 1) {
+          row.status = "duplicate"
+        }
+      })
+      setCsvRows(rows)
+    }
     reader.readAsText(file)
   }
 
@@ -261,14 +284,42 @@ function normalizeAndValidateRow(r: any) {
 }
 
 function handleCSVImport(includeAll: boolean) {
-  const processedRows = csvRows.map(normalizeAndValidateRow)
+  const processedRows = csvRows.map(row => ({
+    ...normalizeAndValidateRow(row),
+    lineNum: row.rowNum,
+  }))
 
   const toImport = processedRows.filter(r =>
     includeAll ? r.status !== "error" : r.status === "valid"
   )
 
+  // Categorize rows
+  let inserted = 0
+  let updated = 0
+  const failed: { line: number; errors: string[] }[] = []
+
+  for (const row of toImport) {
+    const key = `${row.data.store.toLowerCase()}::${row.data.last4}`
+    const existing = allCards.find(
+      c => `${c.store.toLowerCase()}::${c.last4}` === key
+    )
+
+    if (existing) {
+      updated++
+    } else {
+      inserted++
+    }
+  }
+
+  // Collect failed rows
+  for (const row of processedRows) {
+    if (row.status === "error") {
+      failed.push({ line: row.lineNum, errors: row.errors })
+    }
+  }
+
   // extract valid data only
-  const validData = toImport.map(r => r.data)
+  const validData = toImport.filter(r => r.status !== "error").map(r => r.data)
 
   setAddedCards(prev => [
     ...prev,
@@ -283,15 +334,9 @@ function handleCSVImport(includeAll: boolean) {
     }))
   ])
 
-  // --- summary ---
-  const inserted = validData.length
-  const failed = processedRows.filter(r => r.status === "error").length
-
-  setImportedCount(inserted)
+  setImportedCount(validData.length)
+  setImportSummary({ inserted, updated, failed })
   setCsvImportDone(true)
-
-  // OPTIONAL: store errors for UI display
-  console.log("Row Errors:", processedRows.filter(r => r.errors.length))
 }
 
   function downloadTemplate() {
@@ -608,11 +653,49 @@ function handleCSVImport(includeAll: boolean) {
                   </div>
 
                   {csvImportDone && (
-                    <div className="rounded-lg border border-green-200 bg-green-50 px-4 py-3 flex items-center gap-3">
-                      <HugeiconsIcon icon={CheckmarkCircle01Icon} strokeWidth={2} className="size-4 text-green-600 shrink-0" />
-                      <p className="text-sm text-green-800">
-                        <strong>{importedCount} card{importedCount !== 1 ? "s" : ""}</strong> imported successfully.
-                      </p>
+                    <div className="space-y-3">
+                      <div className="rounded-lg border border-green-200 bg-green-50 px-4 py-3 flex items-center gap-3">
+                        <HugeiconsIcon icon={CheckmarkCircle01Icon} strokeWidth={2} className="size-4 text-green-600 shrink-0" />
+                        <p className="text-sm text-green-800">
+                          <strong>{importedCount} card{importedCount !== 1 ? "s" : ""}</strong> imported successfully.
+                        </p>
+                      </div>
+
+                      {importSummary && (
+                        <div className="rounded-lg border border-[#e2e8f0] bg-white p-4 space-y-3">
+                          <p className="font-medium text-sm text-[#0a0a0a]">Import Summary</p>
+                          <div className="grid grid-cols-3 gap-3">
+                            <div className="space-y-1">
+                              <p className="text-xs text-[#737373]">Inserted</p>
+                              <p className="text-lg font-semibold text-green-600">{importSummary.inserted}</p>
+                            </div>
+                            <div className="space-y-1">
+                              <p className="text-xs text-[#737373]">Updated</p>
+                              <p className="text-lg font-semibold text-blue-600">{importSummary.updated}</p>
+                            </div>
+                            <div className="space-y-1">
+                              <p className="text-xs text-[#737373]">Failed</p>
+                              <p className="text-lg font-semibold text-destructive">{importSummary.failed.length}</p>
+                            </div>
+                          </div>
+
+                          {importSummary.failed.length > 0 && (
+                            <div className="space-y-2 pt-2 border-t border-[#e2e8f0]">
+                              <p className="text-xs font-medium text-destructive">Failed Rows</p>
+                              <div className="space-y-2 text-xs text-[#737373] max-h-40 overflow-y-auto">
+                                {importSummary.failed.map((fail, i) => (
+                                  <div key={i} className="ml-2">
+                                    <p className="font-medium text-destructive">Line {fail.line}:</p>
+                                    {fail.errors.map((err, j) => (
+                                      <p key={j} className="text-destructive">• {err}</p>
+                                    ))}
+                                  </div>
+                                ))}
+                              </div>
+                            </div>
+                          )}
+                        </div>
+                      )}
                     </div>
                   )}
 
