@@ -65,21 +65,51 @@ function findDuplicate(store: string, last4: string, cards: typeof existingData.
 }
 
 function parseCSV(text: string): CSVRow[] {
-  const lines = text.trim().split(/\r?\n/)
-  const data = lines[0]?.toLowerCase().includes("store") ? lines.slice(1) : lines
+  const lines = text.trim().split(/\r?\n/);
+  if (lines.length === 0) return [];
+
+  // 1. Identify Header Indices
+  const headers = lines[0].toLowerCase().split(",").map(h => h.trim());
+  const col = {
+    store: headers.indexOf("store"),
+    last4: headers.indexOf("last4"),
+    amount: headers.indexOf("amount"),
+    addedBy: headers.indexOf("added_by"), // Maps template 'added_by' to logic
+    notes: headers.indexOf("notes")
+  };
+
+  // 2. Process Data Rows
+  const data = lines.slice(1);
   return data.filter(l => l.trim()).map((line, i) => {
-    const [store = "", last4 = "", amount = "", addedBy = "", ...rest] = line.split(",").map(p => p.trim())
-    const errors: string[] = []
-    if (!store) errors.push("Store missing")
-    if (!/^\d{4}$/.test(last4)) errors.push("Last 4 must be 4 digits")
-    if (!amount || isNaN(parseFloat(amount)) || parseFloat(amount) <= 0) errors.push("Invalid amount")
-    if (!addedBy) errors.push("Added by missing")
-    const isDup = findDuplicate(store, last4, existingData.cards)
+    // Basic CSV split - note: this still lacks full quoted-string support
+    // but header mapping makes it significantly more deterministic.
+    const parts = line.split(",").map(p => p.trim());
+    
+    const store = parts[col.store] || "";
+    const last4 = parts[col.last4] || "";
+    const amount = parts[col.amount] || "";
+    const addedBy = parts[col.addedBy] || "";
+    const notes = col.notes !== -1 ? parts[col.notes] : "";
+
+    const errors: string[] = [];
+    if (!store) errors.push("Store missing");
+    if (!/^\d{4}$/.test(last4)) errors.push("Last 4 must be 4 digits");
+    if (!amount || isNaN(parseFloat(amount)) || parseFloat(amount) <= 0) errors.push("Invalid amount");
+    if (!addedBy) errors.push("Added by missing");
+
+    const isDup = findDuplicate(store, last4, existingData.cards);
+    
     return {
-      rowNum: i + 1, store, last4, amount, addedBy, notes: rest.join(",").trim(),
-      status: errors.length ? "error" : isDup ? "duplicate" : "valid", errors,
-    } as CSVRow
-  })
+      rowNum: i + 1,
+      store,
+      last4,
+      amount,
+      addedBy,
+      notes,
+      status: errors.length ? "error" : isDup ? "duplicate" : "valid",
+      errors,
+    } as CSVRow;
+  });
 }
 
 // ── Store Combobox ─────────────────────────────────────────────────────────────
@@ -192,30 +222,36 @@ export default function AddCardPage() {
   }
 
   function processFile(file: File) {
-    if (!file.name.endsWith(".csv")) return
-    setCsvFileName(file.name); setCsvImportDone(false)
-    const reader = new FileReader()
-    reader.onload = e => {
-      const rows = parseCSV(e.target?.result as string)
-      // Count occurrences of each key
-      const keyCount = new Map<string, number>()
-      rows.forEach(row => {
-        if (row.status === "error") return
-        const key = `${row.store.toLowerCase()}::${row.last4}`
-        keyCount.set(key, (keyCount.get(key) || 0) + 1)
-      })
-      // Mark all duplicates (within CSV) as duplicate
-      rows.forEach(row => {
-        if (row.status === "error") return
-        const key = `${row.store.toLowerCase()}::${row.last4}`
-        if (keyCount.get(key)! > 1) {
-          row.status = "duplicate"
-        }
-      })
-      setCsvRows(rows)
-    }
-    reader.readAsText(file)
+  if (!file.name.endsWith(".csv")) {
+    alert("Please upload a valid CSV file.");
+    return;
   }
+
+  setCsvFileName(file.name);
+  setCsvImportDone(false);
+  setImportSummary(null);
+
+  const reader = new FileReader();
+  reader.onload = e => {
+    const text = e.target?.result as string;
+    const rows = parseCSV(text);
+    
+    // Internal duplicate detection (check if CSV contains same card twice)
+    const seen = new Set();
+    rows.forEach(row => {
+      if (row.status === "error") return;
+      const key = `${row.store.toLowerCase()}-${row.last4}`;
+      if (seen.has(key)) {
+        row.status = "duplicate";
+        row.errors.push("Duplicate found within this CSV file");
+      }
+      seen.add(key);
+    });
+
+    setCsvRows(rows);
+  };
+  reader.readAsText(file);
+}
 
 type NormalizedRow = {
   store: string
@@ -227,60 +263,43 @@ type NormalizedRow = {
 }
 
 function normalizeAndValidateRow(r: any) {
-  const errors: string[] = []
+  const errors: string[] = [];
 
-  // --- normalize ---
-  const store = r.store?.trim() || ""
+  // Normalization
+  const store = r.store?.trim() || "";
+  // Ensure last4 is exactly the last 4 digits of whatever was entered
+  const last4Raw = String(r.last4 ?? "").replace(/\D/g, "");
+  const last4 = last4Raw.length >= 4 ? last4Raw.slice(-4) : last4Raw;
 
-  const last4Raw = String(r.last4 ?? "").replace(/\D/g, "")
-  const last4 = last4Raw.slice(-4)
+  // Clean currency symbols or commas
+  const amountParsed = parseFloat(String(r.amount).replace(/[^0-9.-]+/g, ""));
+  const amount = isNaN(amountParsed) ? 0 : amountParsed;
 
-  const amountParsed = parseFloat(
-    String(r.amount).replace(/[^0-9.-]+/g, "")
-  )
+  const dateAdded = r.dateAdded ? new Date(r.dateAdded) : new Date();
+  const addedBy = r.addedBy?.trim() || "";
+  const notes = r.notes?.trim() || "";
 
-  const amount = isNaN(amountParsed) ? NaN : amountParsed
-
-  const dateAdded = r.dateAdded ? new Date(r.dateAdded) : null
-
-  const addedBy = r.addedBy?.trim() || ""
-  const notes = r.notes?.trim() || ""
-
-  // --- validation ---
-  if (!store) errors.push("Missing store")
-
-  if (last4.length !== 4) {
-    errors.push("Invalid last4 (must be 4 digits)")
-  }
-
-  if (isNaN(amount)) {
-    errors.push("Invalid amount")
-  } else if (amount <= 0) {
-    errors.push("Amount must be > 0")
-  }
-
-  if (dateAdded && isNaN(dateAdded.getTime())) {
-    errors.push("Invalid date")
-  }
-
-  if (!addedBy) {
-    errors.push("Missing addedBy")
-  }
+  // Validation Rules (Shared between Form and CSV)
+  if (!store) errors.push("Store is required");
+  if (last4.length !== 4) errors.push("Last 4 digits must be exactly 4 numbers");
+  if (amount <= 0) errors.push("Amount must be greater than 0");
+  if (!addedBy) errors.push("Added by is required");
+  if (dateAdded && isNaN(dateAdded.getTime())) errors.push("Invalid date format");
 
   const normalized: NormalizedRow = {
     store,
     last4,
-    amount: isNaN(amount) ? 0 : amount, // safe fallback
-    dateAdded,
+    amount,
+    dateAdded: isNaN(dateAdded.getTime()) ? new Date() : dateAdded,
     addedBy,
     notes,
-  }
+  };
 
   return {
     data: normalized,
     errors,
     status: errors.length ? "error" : "valid",
-  }
+  };
 }
 
 function handleCSVImport(includeAll: boolean) {
