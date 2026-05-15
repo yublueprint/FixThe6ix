@@ -1,64 +1,13 @@
--- CreateEnum
-CREATE TYPE "StoreCategory" AS ENUM ('FAST_FOOD', 'GROCERY', 'CLOTHING', 'RESTAURANT', 'PHARMACY', 'ELECTRONICS', 'HOME_GOODS', 'ONLINE', 'OTHER');
+-- Incremental auth migration (was incorrectly duplicating init DDL).
+-- Depends on: 20260320211327_init (enums, Store, GiftCard, Transaction, User with id + role only).
 
--- CreateEnum
-CREATE TYPE "GiftCardStatus" AS ENUM ('ACTIVE', 'PARTIALLY_REDEEMED', 'FULLY_REDEEMED', 'DONATED');
-
--- CreateEnum
-CREATE TYPE "TransactionType" AS ENUM ('SPEND', 'DONATION_OUT');
-
--- CreateEnum
-CREATE TYPE "UserRole" AS ENUM ('ADMIN', 'VOLUNTEER');
-
--- CreateTable
-CREATE TABLE "Store" (
-    "id" TEXT NOT NULL,
-    "name" TEXT NOT NULL,
-    "category" "StoreCategory" NOT NULL,
-    "logoUrl" TEXT,
-
-    CONSTRAINT "Store_pkey" PRIMARY KEY ("id")
-);
-
--- CreateTable
-CREATE TABLE "GiftCard" (
-    "id" TEXT NOT NULL,
-    "storeId" TEXT NOT NULL,
-    "lastFourDigits" VARCHAR(4) NOT NULL,
-    "initialAmount" DECIMAL(10,2) NOT NULL,
-    "remainingAmount" DECIMAL(10,2) NOT NULL,
-    "status" "GiftCardStatus" NOT NULL,
-    "notes" TEXT,
-    "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
-
-    CONSTRAINT "GiftCard_pkey" PRIMARY KEY ("id")
-);
-
--- CreateTable
-CREATE TABLE "Transaction" (
-    "id" TEXT NOT NULL,
-    "giftCardId" TEXT NOT NULL,
-    "amount" DECIMAL(10,2) NOT NULL,
-    "type" "TransactionType" NOT NULL,
-    "recipientName" TEXT,
-    "volunteerName" TEXT,
-    "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
-
-    CONSTRAINT "Transaction_pkey" PRIMARY KEY ("id")
-);
-
--- CreateTable
-CREATE TABLE "User" (
-    "id" TEXT NOT NULL,
-    "name" TEXT,
-    "email" TEXT,
-    "emailVerified" TIMESTAMP(3),
-    "image" TEXT,
-    "password" TEXT,
-    "role" "UserRole" NOT NULL DEFAULT 'VOLUNTEER',
-
-    CONSTRAINT "User_pkey" PRIMARY KEY ("id")
-);
+-- AlterTable: extend User for NextAuth-style fields
+ALTER TABLE "User" ADD COLUMN "name" TEXT;
+ALTER TABLE "User" ADD COLUMN "email" TEXT;
+ALTER TABLE "User" ADD COLUMN "emailVerified" TIMESTAMP(3);
+ALTER TABLE "User" ADD COLUMN "image" TEXT;
+ALTER TABLE "User" ADD COLUMN "password" TEXT;
+ALTER TABLE "User" ALTER COLUMN "role" SET DEFAULT 'VOLUNTEER';
 
 -- CreateTable
 CREATE TABLE "Account" (
@@ -96,12 +45,6 @@ CREATE TABLE "VerificationToken" (
 );
 
 -- CreateIndex
-CREATE UNIQUE INDEX "Store_name_key" ON "Store"("name");
-
--- CreateIndex
-CREATE UNIQUE INDEX "GiftCard_storeId_lastFourDigits_key" ON "GiftCard"("storeId", "lastFourDigits");
-
--- CreateIndex
 CREATE UNIQUE INDEX "User_email_key" ON "User"("email");
 
 -- CreateIndex
@@ -115,12 +58,6 @@ CREATE UNIQUE INDEX "VerificationToken_token_key" ON "VerificationToken"("token"
 
 -- CreateIndex
 CREATE UNIQUE INDEX "VerificationToken_identifier_token_key" ON "VerificationToken"("identifier", "token");
-
--- AddForeignKey
-ALTER TABLE "GiftCard" ADD CONSTRAINT "GiftCard_storeId_fkey" FOREIGN KEY ("storeId") REFERENCES "Store"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
-
--- AddForeignKey
-ALTER TABLE "Transaction" ADD CONSTRAINT "Transaction_giftCardId_fkey" FOREIGN KEY ("giftCardId") REFERENCES "GiftCard"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
 
 -- AddForeignKey
 ALTER TABLE "Account" ADD CONSTRAINT "Account_userId_fkey" FOREIGN KEY ("userId") REFERENCES "User"("id") ON DELETE CASCADE ON UPDATE CASCADE;
