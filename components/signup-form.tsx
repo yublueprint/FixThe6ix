@@ -24,12 +24,14 @@ export function SignupForm({ ...props }: React.ComponentProps<typeof Card>) {
   const [password, setPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
   const [error, setError] = useState("");
+  const [notice, setNotice] = useState("");
   const [loading, setLoading] = useState(false);
   const router = useRouter();
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
     setError("");
+    setNotice("");
 
     if (password !== confirmPassword) {
       setError("Passwords do not match.");
@@ -44,7 +46,7 @@ export function SignupForm({ ...props }: React.ComponentProps<typeof Card>) {
     setLoading(true);
 
     const supabase = createClient();
-    const { error } = await supabase.auth.signUp({ email, password });
+    const { data, error } = await supabase.auth.signUp({ email, password });
 
     if (error) {
       setError(error.message);
@@ -52,8 +54,14 @@ export function SignupForm({ ...props }: React.ComponentProps<typeof Card>) {
       return;
     }
 
-    router.push("/dashboard");
-    router.refresh();
+    if (data?.session) {
+      router.push("/dashboard");
+      router.refresh();
+      return;
+    }
+
+    setNotice("Check your email to confirm your account, then sign in.");
+    setLoading(false);
   }
 
   return (
@@ -105,6 +113,9 @@ export function SignupForm({ ...props }: React.ComponentProps<typeof Card>) {
             </Field>
             {error && (
               <p className="text-sm text-red-500">{error}</p>
+            )}
+            {notice && (
+              <p className="text-sm text-green-600">{notice}</p>
             )}
             <Field>
               <Button type="submit" disabled={loading}>

@@ -261,11 +261,16 @@ async function seedImportPipelineDemo(timHortonsStoreId: string | undefined) {
   );
   console.log("import_staging rows for demo batch:", JSON.stringify(stagingForBatch, null, 2));
 
-  const badFile = `__seed_check_${Date.now()}__`;
+  const checkTimestamp = Date.now();
+  const checkId = `seed-check-${checkTimestamp}`;
+  const badFile = `__seed_check_${checkTimestamp}__`;
   const badStatus = "not-a-real-status";
   try {
     await prisma.$executeRaw(
-      Prisma.sql`INSERT INTO import_batches (id, file_name, status, metadata, created_at, updated_at) VALUES (gen_random_uuid()::text, ${badFile}, ${badStatus}, '{}'::jsonb, NOW(), NOW())`
+      Prisma.sql`INSERT INTO import_batches (id, file_name, status, metadata, created_at, updated_at) VALUES (${checkId}, ${badFile}, ${badStatus}, '{}'::jsonb, NOW(), NOW())`
+    );
+    await prisma.$executeRaw(
+      Prisma.sql`DELETE FROM import_batches WHERE id = ${checkId}`
     );
     console.warn(
       "import_batches: WARNING — invalid status was accepted. Is import_batches_status_check missing from this database?"
