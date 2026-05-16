@@ -70,6 +70,109 @@ model Transaction {
 }
 
 model User {
-  id   String   @id @default(uuid())
-  role UserRole
+  id            String    @id @default(uuid())
+  name          String?
+  email         String?   @unique
+  emailVerified DateTime?
+  image         String?
+  password      String?
+  role          UserRole  @default(VOLUNTEER)
+  accounts      Account[]
+  sessions      Session[]
+}
+
+model Account {
+  id                String  @id @default(cuid())
+  userId            String
+  type              String
+  provider          String
+  providerAccountId String
+  refresh_token     String? @db.Text
+  access_token      String? @db.Text
+  expires_at        Int?
+  token_type        String?
+  scope             String?
+  id_token          String? @db.Text
+  session_state     String?
+  user              User    @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([provider, providerAccountId])
+}
+
+model Session {
+  id           String   @id @default(cuid())
+  sessionToken String   @unique
+  userId       String
+  expires      DateTime
+  user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model VerificationToken {
+  identifier String
+  token      String   @unique
+  expires    DateTime
+
+  @@unique([identifier, token])
+}
+
+// Meet — ImportStaging contract (add when staging model exists):
+// - batchId String @map("batch_id")  →  FK to ImportBatch.id
+// - batch   ImportBatch @relation(fields: [batchId], references: [id], onDelete: Restrict)
+// - ImportBatch: add importStagings ImportStaging[]
+// ImportBatch.id is a UUID string (TEXT), same pattern as Store / GiftCard.
+
+model ImportBatch {
+  id           String   @id @default(uuid())
+  fileName     String   @map("file_name")
+  /// Allowed values enforced in DB: pending | processing | completed | failed
+  status       String   @default("pending")
+  rowCount     Int?     @map("row_count")
+  successCount Int?     @map("success_count")
+  errorCount   Int?     @map("error_count")
+  errorSummary String?  @map("error_summary") @db.Text
+  metadata     Json     @default("{}")
+  createdAt    DateTime @default(now()) @map("created_at")
+  updatedAt    DateTime @updatedAt @map("updated_at")
+  importStagings ImportStaging[]
+  @@index([status])
+  @@index([createdAt])
+  @@map("import_batches")
+}
+
+model ImportStaging {
+  id             String      @id @default(uuid())
+  batchId        String      @map("batch_id")
+  batch          ImportBatch @relation(fields: [batchId], references: [id], onDelete: Restrict)
+
+  // Raw CSV columns (stored as-is from the file)
+  rawStore       String    @map("raw_store")
+  rawLast4       String    @map("raw_last4")
+  rawAmount      String    @map("raw_amount")
+  rawNotes       String?   @map("raw_notes")
+  rawAddedBy     String?   @map("raw_added_by")
+  rawDateAdded   String?   @map("raw_date_added")
+
+  rowNumber      Int       @map("row_number")
+
+  // Validation
+  status           String  @default("pending")
+  validationErrors Json?   @map("validation_errors")
+
+  // Resolved values (populated after validation)
+  resolvedStoreId   String?   @map("resolved_store_id")
+  resolvedLast4     String?   @map("resolved_last4")
+  resolvedAmount    Decimal?  @map("resolved_amount") @db.Decimal(10, 2)
+  resolvedDateAdded DateTime? @map("resolved_date_added")
+
+  // Promotion tracking
+  promotedCardId String?   @map("promoted_card_id")
+  promotedAt     DateTime? @map("promoted_at")
+
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  @@index([batchId])
+  @@index([status])
+  @@index([batchId, status])
+  @@map("import_staging")
 }
