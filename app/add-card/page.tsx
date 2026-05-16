@@ -17,7 +17,7 @@ import {
   Add01Icon, CreditCardIcon, File01Icon, DownloadIcon,
   CheckmarkCircle01Icon, AlertCircleIcon, ArrowRight01Icon,
 } from "@hugeicons/core-free-icons"
-import existingData from "../redemption/data.json"
+import existingData from "../inventory/data.json"
 
 // ── Constants ──────────────────────────────────────────────────────────────────
 
@@ -60,8 +60,22 @@ function validateForm(f: FormData): FieldErrors {
   return e
 }
 
-function findDuplicate(store: string, last4: string, cards: typeof existingData.cards) {
-  return cards.find(c => c.store.toLowerCase() === store.toLowerCase() && c.last4 === last4) ?? null
+type ExistingCard = {
+  id: number
+  store: string
+  last4: string
+  initialBalance: number
+  remainingBalance: number
+  status: string
+  addedDate: string
+  addedBy: string
+  notes?: string
+}
+
+function findDuplicate(store: string, last4: string, cards: ExistingCard[]) {
+  return cards.find(
+    (c) => c.store.toLowerCase() === store.toLowerCase() && c.last4 === last4
+  ) ?? null
 }
 
 function parseCSV(text: string): CSVRow[] {
@@ -177,6 +191,8 @@ export default function AddCardPage() {
   const [csvImportDone, setCsvImportDone] = useState(false)
   const [importedCount, setImportedCount] = useState(0)
   const [isDragging, setIsDragging] = useState(false)
+  const [isImporting, setIsImporting] = useState(false)
+  const [importError, setImportError] = useState<string | null>(null)
   const [importSummary, setImportSummary] = useState<{
     inserted: number
     updated: number
@@ -302,7 +318,13 @@ function normalizeAndValidateRow(r: any) {
   };
 }
 
-function handleCSVImport(includeAll: boolean) {
+async function handleCSVImport(includeAll: boolean) {
+  setImportError(null)
+  setCsvImportDone(false)
+  setImportSummary(null)
+  setImportedCount(0)
+  setIsImporting(true)
+
   const processedRows = csvRows.map(row => ({
     ...normalizeAndValidateRow(row),
     lineNum: row.rowNum,
@@ -312,50 +334,71 @@ function handleCSVImport(includeAll: boolean) {
     includeAll ? r.status !== "error" : r.status === "valid"
   )
 
-  // Categorize rows
-  let inserted = 0
-  let updated = 0
   const failed: { line: number; errors: string[] }[] = []
-
-  for (const row of toImport) {
-    const key = `${row.data.store.toLowerCase()}::${row.data.last4}`
-    const existing = allCards.find(
-      c => `${c.store.toLowerCase()}::${c.last4}` === key
-    )
-
-    if (existing) {
-      updated++
-    } else {
-      inserted++
-    }
-  }
-
-  // Collect failed rows
   for (const row of processedRows) {
     if (row.status === "error") {
       failed.push({ line: row.lineNum, errors: row.errors })
     }
   }
 
-  // extract valid data only
   const validData = toImport.filter(r => r.status !== "error").map(r => r.data)
 
-  setAddedCards(prev => [
-    ...prev,
-    ...validData.map((r, i) => ({
-      id: Date.now() + i,
-      store: r.store,
-      last4: r.last4,
-      amount: r.amount.toFixed(2),
-      dateAdded: r.dateAdded ? r.dateAdded.toISOString().slice(0, 10) : today,
-      addedBy: r.addedBy,
-      notes: r.notes,
-    }))
-  ])
+  const payload = {
+    fileName: csvFileName || "gift_card_import.csv",
+    rows: toImport.map((row) => ({
+      store: row.data.store,
+      last4: row.data.last4,
+      amount: row.data.amount,
+      dateAdded: row.data.dateAdded ? row.data.dateAdded.toISOString().slice(0, 10) : null,
+      addedBy: row.data.addedBy,
+      notes: row.data.notes,
+      status: row.status,
+      errors: row.errors,
+      rowNumber: row.lineNum,
+    })),
+  }
 
-  setImportedCount(validData.length)
-  setImportSummary({ inserted, updated, failed })
-  setCsvImportDone(true)
+  if (!payload.rows.length) {
+    setImportError("No valid rows available to import after validation.")
+    setIsImporting(false)
+    return
+  }
+
+  try {
+    const response = await fetch("/api/import-cards", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(payload),
+    })
+
+    const result = await response.json()
+    if (!response.ok) {
+      setImportError(result?.error || "Import failed.")
+      setIsImporting(false)
+      return
+    }
+
+    setAddedCards(prev => [
+      ...prev,
+      ...validData.map((r, i) => ({
+        id: Date.now() + i,
+        store: r.store,
+        last4: r.last4,
+        amount: r.amount.toFixed(2),
+        dateAdded: r.dateAdded ? r.dateAdded.toISOString().slice(0, 10) : today,
+        addedBy: r.addedBy,
+        notes: r.notes,
+      }))
+    ])
+
+    setImportedCount(validData.length)
+    setImportSummary({ inserted: result.inserted ?? 0, updated: result.updated ?? 0, failed })
+    setCsvImportDone(true)
+  } catch (error) {
+    setImportError(error instanceof Error ? error.message : "Import failed.")
+  } finally {
+    setIsImporting(false)
+  }
 }
 
   function downloadTemplate() {
@@ -718,6 +761,12 @@ function handleCSVImport(includeAll: boolean) {
                     </div>
                   )}
 
+                  {importError && (
+                    <div className="rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
+                      {importError}
+                    </div>
+                  )}
+
                   <div className="rounded-md border overflow-auto flex-1">
                     <Table>
                       <TableHeader>
@@ -763,17 +812,19 @@ function handleCSVImport(includeAll: boolean) {
                       {csvValid > 0 && (
                         <button
                           onClick={() => handleCSVImport(false)}
-                          className="bg-[#0f172a] text-white text-sm font-medium px-4 py-2 rounded-[6px] hover:bg-[#1e293b] transition-colors"
+                          disabled={isImporting}
+                          className={`bg-[#0f172a] text-white text-sm font-medium px-4 py-2 rounded-[6px] transition-colors ${isImporting ? "opacity-50 cursor-not-allowed" : "hover:bg-[#1e293b]"}`}
                         >
-                          Import Valid ({csvValid})
+                          {isImporting ? "Importing…" : `Import Valid (${csvValid})`}
                         </button>
                       )}
                       {csvDuplicates > 0 && (
                         <button
                           onClick={() => handleCSVImport(true)}
-                          className="border border-[#e2e8f0] text-sm font-medium px-4 py-2 rounded-[6px] hover:bg-[#f5f5f5] transition-colors"
+                          disabled={isImporting}
+                          className={`border border-[#e2e8f0] text-sm font-medium px-4 py-2 rounded-[6px] transition-colors ${isImporting ? "opacity-50 cursor-not-allowed" : "hover:bg-[#f5f5f5]"}`}
                         >
-                          Import All Except Errors ({csvValid + csvDuplicates})
+                          {isImporting ? "Importing…" : `Import All Except Errors (${csvValid + csvDuplicates})`}
                         </button>
                       )}
                     </div>
