@@ -1,8 +1,11 @@
 import { PrismaClient } from "@prisma/client";
 import { PrismaPg } from "@prisma/adapter-pg";
+import { loadEnvConfig } from "@next/env";
+
+loadEnvConfig(process.cwd());
 
 const globalForPrisma = globalThis as unknown as { prisma: PrismaClient };
-
+console.log("DATABASE_URL:", process.env.DATABASE_URL)
 function createPrismaClient() {
   const databaseUrl = process.env.DATABASE_URL;
   if (!databaseUrl) {

@@ -1,8 +1,0 @@
-store,last4,amount,added_by,notes
-Walmart,1234,100.00,Sarah Johnson,Example valid card
-Target,5678,50.00,Mike Davis,Imported from test file
-Amazon,0001,75.50,Amy Brown,Existing store valid row
-Random Shop,9999,20.00,James Lee,Store not in master list
-Costco,4321,-10.00,Lisa Chen,Invalid amount should fail
-Starbucks,9876,25.50,,Missing added_by should fail
-Walmart,1234,100.00,Sarah Johnson,Duplicate row for CSV duplicate handling

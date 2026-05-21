@@ -17,21 +17,11 @@ import {
   Add01Icon, CreditCardIcon, File01Icon, DownloadIcon,
   CheckmarkCircle01Icon, AlertCircleIcon, ArrowRight01Icon,
 } from "@hugeicons/core-free-icons"
-import existingData from "../inventory/data.json"
 
 // ── Constants ──────────────────────────────────────────────────────────────────
 
-const STORE_OPTIONS = [
-  "Amazon", "Applebee's", "Best Buy", "Burger King", "Chick-fil-A", "Chipotle",
-  "Costco", "CVS Pharmacy", "Dollar General", "Domino's", "Dunkin'", "Gap",
-  "Home Depot", "IHOP", "KFC", "Kohl's", "Kroger", "Macy's", "McDonald's",
-  "Old Navy", "Olive Garden", "Panera Bread", "Pizza Hut", "Safeway", "Starbucks",
-  "Subway", "Taco Bell", "Target", "Trader Joe's", "TJ Maxx", "Walgreens",
-  "Walmart", "Wendy's", "Whole Foods",
-].sort()
-
-const VOLUNTEERS = ["Amy Brown", "James Lee", "Lisa Chen", "Mike Davis", "Sarah Johnson"]
-const CSV_TEMPLATE = `store,last4,amount,added_by,notes\nWalmart,1234,100.00,Sarah Johnson,Example card\nTarget,5678,50.00,Mike Davis,`
+// CSV template now matches the actual RawRGCData export format
+const CSV_TEMPLATE = `vendor,last4,remaining,redeemed,delivered_to,delivery_date\nChapters-Indigo,4172,,0.73,ParkRoad,2023-04-20\nTim Hortons,1088,0.17,,,2023-04-20`
 const today = new Date().toISOString().slice(0, 10)
 
 // ── Types ──────────────────────────────────────────────────────────────────────
@@ -41,9 +31,18 @@ interface FormData {
   dateAdded: string; addedBy: string; notes: string
 }
 interface FieldErrors { store?: string; last4?: string; amount?: string; addedBy?: string }
+
+// Matches the new CSV columns
 interface CSVRow {
-  rowNum: number; store: string; last4: string; amount: string
-  addedBy: string; notes: string; status: "valid" | "duplicate" | "error"; errors: string[]
+  rowNum: number
+  vendor: string
+  last4: string
+  remaining: string
+  redeemed: string
+  delivered_to: string
+  delivery_date: string
+  status: "valid" | "duplicate" | "error"
+  errors: string[]
 }
 
 const EMPTY_FORM: FormData = { store: "", last4: "", amount: "", dateAdded: today, addedBy: "", notes: "" }
@@ -60,82 +59,80 @@ function validateForm(f: FormData): FieldErrors {
   return e
 }
 
-type ExistingCard = {
-  id: number
-  store: string
-  last4: string
-  initialBalance: number
-  remainingBalance: number
-  status: string
-  addedDate: string
-  addedBy: string
-  notes?: string
-}
-
-function findDuplicate(store: string, last4: string, cards: ExistingCard[]) {
-  return cards.find(
-    (c) => c.store.toLowerCase() === store.toLowerCase() && c.last4 === last4
-  ) ?? null
-}
-
+// Parse CSV with new column headers
 function parseCSV(text: string): CSVRow[] {
-  const lines = text.trim().split(/\r?\n/);
-  if (lines.length === 0) return [];
+  const lines = text.trim().split(/\r?\n/)
+  if (lines.length === 0) return []
 
-  // 1. Identify Header Indices
-  const headers = lines[0].toLowerCase().split(",").map(h => h.trim());
+  const headers = lines[0].toLowerCase().split(",").map(h => h.trim())
   const col = {
-    store: headers.indexOf("store"),
+    vendor: headers.indexOf("vendor"),
     last4: headers.indexOf("last4"),
-    amount: headers.indexOf("amount"),
-    addedBy: headers.indexOf("added_by"), // Maps template 'added_by' to logic
-    notes: headers.indexOf("notes")
-  };
+    remaining: headers.indexOf("remaining"),
+    redeemed: headers.indexOf("redeemed"),
+    delivered_to: headers.indexOf("delivered_to"),
+    delivery_date: headers.indexOf("delivery_date"),
+  }
 
-  // 2. Process Data Rows
-  const data = lines.slice(1);
+  const data = lines.slice(1)
   return data.filter(l => l.trim()).map((line, i) => {
-    // Basic CSV split - note: this still lacks full quoted-string support
-    // but header mapping makes it significantly more deterministic.
-    const parts = line.split(",").map(p => p.trim());
-    
-    const store = parts[col.store] || "";
-    const last4 = parts[col.last4] || "";
-    const amount = parts[col.amount] || "";
-    const addedBy = parts[col.addedBy] || "";
-    const notes = col.notes !== -1 ? parts[col.notes] : "";
+    const parts = line.split(",").map(p => p.trim())
 
-    const errors: string[] = [];
-    if (!store) errors.push("Store missing");
-    if (!/^\d{4}$/.test(last4)) errors.push("Last 4 must be 4 digits");
-    if (!amount || isNaN(parseFloat(amount)) || parseFloat(amount) <= 0) errors.push("Invalid amount");
-    if (!addedBy) errors.push("Added by missing");
+    const vendor = col.vendor !== -1 ? parts[col.vendor] || "" : ""
+    const last4 = col.last4 !== -1 ? parts[col.last4] || "" : ""
+    const remaining = col.remaining !== -1 ? parts[col.remaining] || "" : ""
+    const redeemed = col.redeemed !== -1 ? parts[col.redeemed] || "" : ""
+    const delivered_to = col.delivered_to !== -1 ? parts[col.delivered_to] || "" : ""
+    const delivery_date = col.delivery_date !== -1 ? parts[col.delivery_date] || "" : ""
 
-    const isDup = findDuplicate(store, last4, existingData.cards);
-    
+    const errors: string[] = []
+    if (!vendor) errors.push("Vendor missing")
+
+    // last4 validation — strip non-digits and check length
+    const last4Clean = last4.replace(/\D/g, "")
+    if (last4Clean.length !== 4) errors.push("Last 4 must be 4 digits")
+
+    // At least one of remaining or redeemed must be a valid number
+    const remainingNum = parseFloat(remaining.replace(/[^0-9.-]+/g, ""))
+    const redeemedNum = parseFloat(redeemed.replace(/[^0-9.-]+/g, ""))
+    if (isNaN(remainingNum) && isNaN(redeemedNum)) {
+      errors.push("At least one of remaining or redeemed must be a valid amount")
+    }
+
     return {
       rowNum: i + 1,
-      store,
-      last4,
-      amount,
-      addedBy,
-      notes,
-      status: errors.length ? "error" : isDup ? "duplicate" : "valid",
+      vendor,
+      last4: last4Clean.length >= 4 ? last4Clean.slice(-4) : last4Clean,
+      remaining,
+      redeemed,
+      delivered_to,
+      delivery_date,
+      status: errors.length ? "error" : "valid",
       errors,
-    } as CSVRow;
-  });
+    } as CSVRow
+  })
 }
 
 // ── Store Combobox ─────────────────────────────────────────────────────────────
 
-function StoreCombobox({ value, onChange, error }: { value: string; onChange: (v: string) => void; error?: string }) {
+function StoreCombobox({
+  value,
+  onChange,
+  error,
+  options,
+}: {
+  value: string
+  onChange: (v: string) => void
+  error?: string
+  options: string[]
+}) {
   const [open, setOpen] = useState(false)
   const [query, setQuery] = useState(value)
   const ref = useRef<HTMLDivElement>(null)
 
   const filtered = useMemo(() =>
-    !query.trim() ? STORE_OPTIONS : STORE_OPTIONS.filter(s => s.toLowerCase().includes(query.toLowerCase()))
-  , [query])
+    !query.trim() ? options : options.filter(s => s.toLowerCase().includes(query.toLowerCase()))
+  , [query, options])
 
   useEffect(() => { setQuery(value) }, [value])
   useEffect(() => {
@@ -162,7 +159,7 @@ function StoreCombobox({ value, onChange, error }: { value: string; onChange: (v
               className="w-full px-3 py-2 text-left text-sm hover:bg-accent hover:text-accent-foreground transition-colors"
             >{store}</button>
           ))}
-          {query.trim() && !STORE_OPTIONS.find(s => s.toLowerCase() === query.toLowerCase()) && (
+          {query.trim() && !options.find(s => s.toLowerCase() === query.toLowerCase()) && (
             <button type="button"
               onMouseDown={e => { e.preventDefault(); onChange(query.trim()); setQuery(query.trim()); setOpen(false) }}
               className="w-full px-3 py-2 text-left text-sm text-muted-foreground hover:bg-accent border-t hover:text-accent-foreground transition-colors"
@@ -178,12 +175,15 @@ function StoreCombobox({ value, onChange, error }: { value: string; onChange: (v
 // ── Main Page ──────────────────────────────────────────────────────────────────
 
 export default function AddCardPage() {
+  // Store options fetched from Supabase
+  const [storeOptions, setStoreOptions] = useState<string[]>([])
+  const [storesLoading, setStoresLoading] = useState(true)
+
   // Single entry state
   const [form, setFormState] = useState<FormData>(EMPTY_FORM)
   const [fieldErrors, setFieldErrors] = useState<FieldErrors>({})
-  const [pageState, setPageState] = useState<"form" | "confirm-duplicate" | "success">("form")
+  const [pageState, setPageState] = useState<"form" | "success">("form")
   const [addedCards, setAddedCards] = useState<(FormData & { id: number })[]>([])
-  const [pendingDuplicate, setPendingDuplicate] = useState<ReturnType<typeof findDuplicate>>(null)
 
   // CSV state
   const [csvRows, setCsvRows] = useState<CSVRow[]>([])
@@ -197,22 +197,20 @@ export default function AddCardPage() {
     inserted: number
     updated: number
     failed: { line: number; errors: string[] }[]
+    missingStores: string[]
   } | null>(null)
   const fileInputRef = useRef<HTMLInputElement>(null)
 
-  const allCards = useMemo(() => [
-    ...existingData.cards,
-    ...addedCards.map((c, i) => ({
-      id: 9000 + i, store: c.store, last4: c.last4,
-      initialBalance: parseFloat(c.amount), remainingBalance: parseFloat(c.amount),
-      status: "Active", addedDate: c.dateAdded, addedBy: c.addedBy,
-    })),
-  ], [addedCards])
-
-  const liveDuplicate = useMemo(() => {
-    if (!form.store || form.last4.length !== 4) return null
-    return findDuplicate(form.store, form.last4, allCards)
-  }, [form.store, form.last4, allCards])
+  // Fetch stores from Supabase on mount
+  useEffect(() => {
+    fetch("/api/stores")
+      .then(r => r.json())
+      .then(data => {
+        setStoreOptions((data ?? []).map((s: { name: string }) => s.name))
+      })
+      .catch(() => setStoreOptions([]))
+      .finally(() => setStoresLoading(false))
+  }, [])
 
   function setField<K extends keyof FormData>(key: K, value: string) {
     setFormState(prev => ({ ...prev, [key]: value }))
@@ -222,9 +220,7 @@ export default function AddCardPage() {
   function handleSubmit() {
     const errors = validateForm(form)
     if (Object.keys(errors).length) { setFieldErrors(errors); return }
-    const dup = findDuplicate(form.store, form.last4, allCards)
-    if (dup) { setPendingDuplicate(dup); setPageState("confirm-duplicate") }
-    else commitCard()
+    commitCard()
   }
 
   function commitCard() {
@@ -234,172 +230,107 @@ export default function AddCardPage() {
 
   function handleAddAnother() {
     setFormState(EMPTY_FORM); setFieldErrors({})
-    setPendingDuplicate(null); setPageState("form")
+    setPageState("form")
   }
 
   function processFile(file: File) {
-  if (!file.name.endsWith(".csv")) {
-    alert("Please upload a valid CSV file.");
-    return;
-  }
-
-  setCsvFileName(file.name);
-  setCsvImportDone(false);
-  setImportSummary(null);
-
-  const reader = new FileReader();
-  reader.onload = e => {
-    const text = e.target?.result as string;
-    const rows = parseCSV(text);
-    
-    // Internal duplicate detection (check if CSV contains same card twice)
-    const seen = new Set();
-    rows.forEach(row => {
-      if (row.status === "error") return;
-      const key = `${row.store.toLowerCase()}-${row.last4}`;
-      if (seen.has(key)) {
-        row.status = "duplicate";
-        row.errors.push("Duplicate found within this CSV file");
-      }
-      seen.add(key);
-    });
-
-    setCsvRows(rows);
-  };
-  reader.readAsText(file);
-}
-
-type NormalizedRow = {
-  store: string
-  last4: string
-  amount: number
-  dateAdded: Date | null
-  addedBy: string
-  notes: string
-}
-
-function normalizeAndValidateRow(r: any) {
-  const errors: string[] = [];
-
-  // Normalization
-  const store = r.store?.trim() || "";
-  // Ensure last4 is exactly the last 4 digits of whatever was entered
-  const last4Raw = String(r.last4 ?? "").replace(/\D/g, "");
-  const last4 = last4Raw.length >= 4 ? last4Raw.slice(-4) : last4Raw;
-
-  // Clean currency symbols or commas
-  const amountParsed = parseFloat(String(r.amount).replace(/[^0-9.-]+/g, ""));
-  const amount = isNaN(amountParsed) ? 0 : amountParsed;
-
-  const dateAdded = r.dateAdded ? new Date(r.dateAdded) : new Date();
-  const addedBy = r.addedBy?.trim() || "";
-  const notes = r.notes?.trim() || "";
-
-  // Validation Rules (Shared between Form and CSV)
-  if (!store) errors.push("Store is required");
-  if (last4.length !== 4) errors.push("Last 4 digits must be exactly 4 numbers");
-  if (amount <= 0) errors.push("Amount must be greater than 0");
-  if (!addedBy) errors.push("Added by is required");
-  if (dateAdded && isNaN(dateAdded.getTime())) errors.push("Invalid date format");
-
-  const normalized: NormalizedRow = {
-    store,
-    last4,
-    amount,
-    dateAdded: isNaN(dateAdded.getTime()) ? new Date() : dateAdded,
-    addedBy,
-    notes,
-  };
-
-  return {
-    data: normalized,
-    errors,
-    status: errors.length ? "error" : "valid",
-  };
-}
-
-async function handleCSVImport(includeAll: boolean) {
-  setImportError(null)
-  setCsvImportDone(false)
-  setImportSummary(null)
-  setImportedCount(0)
-  setIsImporting(true)
-
-  const processedRows = csvRows.map(row => ({
-    ...normalizeAndValidateRow(row),
-    lineNum: row.rowNum,
-  }))
-
-  const toImport = processedRows.filter(r =>
-    includeAll ? r.status !== "error" : r.status === "valid"
-  )
-
-  const failed: { line: number; errors: string[] }[] = []
-  for (const row of processedRows) {
-    if (row.status === "error") {
-      failed.push({ line: row.lineNum, errors: row.errors })
+    if (!file.name.endsWith(".csv")) {
+      alert("Please upload a valid CSV file.")
+      return
     }
+
+    setCsvFileName(file.name)
+    setCsvImportDone(false)
+    setImportSummary(null)
+    setImportError(null)
+
+    const reader = new FileReader()
+    reader.onload = e => {
+      const text = e.target?.result as string
+      const rows = parseCSV(text)
+
+      // Detect duplicates within the CSV itself
+      const seen = new Set<string>()
+      rows.forEach(row => {
+        if (row.status === "error") return
+        const key = `${row.vendor.toLowerCase()}-${row.last4}`
+        if (seen.has(key)) {
+          row.status = "duplicate"
+          row.errors.push("Duplicate within this CSV file")
+        }
+        seen.add(key)
+      })
+
+      setCsvRows(rows)
+    }
+    reader.readAsText(file)
   }
 
-  const validData = toImport.filter(r => r.status !== "error").map(r => r.data)
+  async function handleCSVImport(includeAll: boolean) {
+    setImportError(null)
+    setCsvImportDone(false)
+    setImportSummary(null)
+    setImportedCount(0)
+    setIsImporting(true)
 
-  const payload = {
-    fileName: csvFileName || "gift_card_import.csv",
-    rows: toImport.map((row) => ({
-      store: row.data.store,
-      last4: row.data.last4,
-      amount: row.data.amount,
-      dateAdded: row.data.dateAdded ? row.data.dateAdded.toISOString().slice(0, 10) : null,
-      addedBy: row.data.addedBy,
-      notes: row.data.notes,
-      status: row.status,
-      errors: row.errors,
-      rowNumber: row.lineNum,
-    })),
-  }
+    const toImport = csvRows.filter(r =>
+      includeAll ? r.status !== "error" : r.status === "valid"
+    )
 
-  if (!payload.rows.length) {
-    setImportError("No valid rows available to import after validation.")
-    setIsImporting(false)
-    return
-  }
+    const failed: { line: number; errors: string[] }[] = csvRows
+      .filter(r => r.status === "error")
+      .map(r => ({ line: r.rowNum, errors: r.errors }))
 
-  try {
-    const response = await fetch("/api/import-cards", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(payload),
-    })
-
-    const result = await response.json()
-    if (!response.ok) {
-      setImportError(result?.error || "Import failed.")
+    if (!toImport.length) {
+      setImportError("No valid rows available to import.")
       setIsImporting(false)
       return
     }
 
-    setAddedCards(prev => [
-      ...prev,
-      ...validData.map((r, i) => ({
-        id: Date.now() + i,
-        store: r.store,
-        last4: r.last4,
-        amount: r.amount.toFixed(2),
-        dateAdded: r.dateAdded ? r.dateAdded.toISOString().slice(0, 10) : today,
-        addedBy: r.addedBy,
-        notes: r.notes,
-      }))
-    ])
+    const payload = {
+      fileName: csvFileName || "gift_card_import.csv",
+      rows: toImport.map(row => ({
+        vendor: row.vendor,
+        last4: row.last4,
+        remaining: parseFloat(row.remaining.replace(/[^0-9.-]+/g, "")) || 0,
+        redeemed: row.redeemed ? parseFloat(row.redeemed.replace(/[^0-9.-]+/g, "")) || null : null,
+        delivered_to: row.delivered_to || null,
+        delivery_date: row.delivery_date || null,
+        status: row.status,
+        errors: row.errors,
+        rowNumber: row.rowNum,
+      })),
+    }
 
-    setImportedCount(validData.length)
-    setImportSummary({ inserted: result.inserted ?? 0, updated: result.updated ?? 0, failed })
-    setCsvImportDone(true)
-  } catch (error) {
-    setImportError(error instanceof Error ? error.message : "Import failed.")
-  } finally {
-    setIsImporting(false)
+    try {
+      const response = await fetch("/api/import-cards", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(payload),
+      })
+
+      const result = await response.json()
+
+      if (!response.ok) {
+        setImportError(result?.error || "Import failed.")
+        setIsImporting(false)
+        return
+      }
+
+      setImportedCount(result.inserted ?? 0)
+      setImportSummary({
+        inserted: result.inserted ?? 0,
+        updated: result.updated ?? 0,
+        failed,
+        missingStores: result.missingStores ?? [],
+      })
+      setCsvImportDone(true)
+    } catch (error) {
+      setImportError(error instanceof Error ? error.message : "Import failed.")
+    } finally {
+      setIsImporting(false)
+    }
   }
-}
 
   function downloadTemplate() {
     const blob = new Blob([CSV_TEMPLATE], { type: "text/csv" })
@@ -502,42 +433,6 @@ async function handleCSVImport(includeAll: boolean) {
                 </div>
               )}
 
-              {/* Duplicate confirm state */}
-              {pageState === "confirm-duplicate" && pendingDuplicate && (
-                <div className="flex flex-1 flex-col justify-between p-6">
-                  <div className="rounded-lg border border-yellow-200 bg-yellow-50 p-4">
-                    <div className="flex items-start gap-3">
-                      <div className="mt-0.5 shrink-0 rounded-full bg-yellow-100 p-1">
-                        <HugeiconsIcon icon={AlertCircleIcon} strokeWidth={2} className="size-4 text-yellow-600" />
-                      </div>
-                      <div>
-                        <p className="font-medium text-yellow-900 text-sm">Possible duplicate</p>
-                        <p className="mt-1 text-sm text-yellow-800">
-                          A <strong>{pendingDuplicate.store}</strong> card ending in <strong>{pendingDuplicate.last4}</strong> already exists.
-                        </p>
-                        <p className="mt-0.5 text-xs text-yellow-700">
-                          Added {pendingDuplicate.addedDate} by {pendingDuplicate.addedBy} · ${pendingDuplicate.remainingBalance.toFixed(2)} remaining
-                        </p>
-                      </div>
-                    </div>
-                  </div>
-                  <div className="flex flex-col gap-2 pt-4">
-                    <button
-                      onClick={commitCard}
-                      className="w-full bg-[#0f172a] text-white text-sm font-medium px-4 py-2 rounded-[6px] hover:bg-[#1e293b] transition-colors"
-                    >
-                      Add Anyway
-                    </button>
-                    <button
-                      className="w-full border border-[#e2e8f0] text-sm font-medium px-4 py-2 rounded-[6px] hover:bg-[#f5f5f5] transition-colors"
-                      onClick={() => { setPendingDuplicate(null); setPageState("form") }}
-                    >
-                      Go Back &amp; Edit
-                    </button>
-                  </div>
-                </div>
-              )}
-
               {/* Form state */}
               {pageState === "form" && (
                 <div className="flex flex-1 flex-col">
@@ -548,7 +443,15 @@ async function handleCSVImport(includeAll: boolean) {
 
                     <div className="space-y-1.5">
                       <Label className="text-xs font-medium text-[#737373]">Store</Label>
-                      <StoreCombobox value={form.store} onChange={v => setField("store", v)} error={fieldErrors.store} />
+                      <StoreCombobox
+                        value={form.store}
+                        onChange={v => setField("store", v)}
+                        error={fieldErrors.store}
+                        options={storeOptions}
+                      />
+                      {storesLoading && (
+                        <p className="text-xs text-[#737373]">Loading stores…</p>
+                      )}
                     </div>
 
                     <div className="grid grid-cols-2 gap-3">
@@ -561,12 +464,6 @@ async function handleCSVImport(includeAll: boolean) {
                           className={pillInput(fieldErrors.last4 ? "border-destructive" : "")}
                         />
                         {fieldErrors.last4 && <p className="text-xs text-destructive">{fieldErrors.last4}</p>}
-                        {!fieldErrors.last4 && liveDuplicate && (
-                          <p className="text-xs text-yellow-600 flex items-center gap-1">
-                            <HugeiconsIcon icon={AlertCircleIcon} strokeWidth={2} className="size-3" />
-                            Possible duplicate
-                          </p>
-                        )}
                       </div>
                       <div className="space-y-1.5">
                         <Label className="text-xs font-medium text-[#737373]">Amount</Label>
@@ -603,15 +500,11 @@ async function handleCSVImport(includeAll: boolean) {
                     <div className="space-y-1.5">
                       <Label className="text-xs font-medium text-[#737373]">Added by</Label>
                       <Input
-                        list="volunteers-list"
                         value={form.addedBy}
                         onChange={e => setField("addedBy", e.target.value)}
                         placeholder="Volunteer name"
                         className={pillInput(fieldErrors.addedBy ? "border-destructive" : "")}
                       />
-                      <datalist id="volunteers-list">
-                        {VOLUNTEERS.map(v => <option key={v} value={v} />)}
-                      </datalist>
                       {fieldErrors.addedBy && <p className="text-xs text-destructive">{fieldErrors.addedBy}</p>}
                     </div>
 
@@ -679,7 +572,7 @@ async function handleCSVImport(includeAll: boolean) {
 
                 {!csvRows.length && (
                   <div className="mt-2 rounded-[8px] border border-[#e5e5e5] bg-white/80 px-4 py-2 text-xs text-[#737373] font-mono">
-                    store, last4, amount, added_by, notes
+                    vendor, last4, remaining, redeemed, delivered_to, delivery_date
                   </div>
                 )}
               </div>
@@ -700,7 +593,7 @@ async function handleCSVImport(includeAll: boolean) {
                     <div className="flex items-center gap-2">
                       <button
                         className="text-sm font-medium text-[#0a0a0a] px-3 h-8 rounded-[26px] hover:bg-[#e5e5e5] transition-colors"
-                        onClick={() => { setCsvRows([]); setCsvFileName(""); setCsvImportDone(false) }}
+                        onClick={() => { setCsvRows([]); setCsvFileName(""); setCsvImportDone(false); setImportSummary(null) }}
                       >
                         Clear
                       </button>
@@ -741,6 +634,13 @@ async function handleCSVImport(includeAll: boolean) {
                             </div>
                           </div>
 
+                          {importSummary.missingStores.length > 0 && (
+                            <div className="pt-2 border-t border-[#e2e8f0]">
+                              <p className="text-xs font-medium text-yellow-700 mb-1">Stores not found in database:</p>
+                              <p className="text-xs text-[#737373]">{importSummary.missingStores.join(", ")}</p>
+                            </div>
+                          )}
+
                           {importSummary.failed.length > 0 && (
                             <div className="space-y-2 pt-2 border-t border-[#e2e8f0]">
                               <p className="text-xs font-medium text-destructive">Failed Rows</p>
@@ -773,11 +673,12 @@ async function handleCSVImport(includeAll: boolean) {
                         <TableRow>
                           <TableHead className="w-8">#</TableHead>
                           <TableHead>Status</TableHead>
-                          <TableHead>Store</TableHead>
+                          <TableHead>Vendor</TableHead>
                           <TableHead>Last 4</TableHead>
-                          <TableHead>Amount</TableHead>
-                          <TableHead>Added By</TableHead>
-                          <TableHead>Notes</TableHead>
+                          <TableHead>Remaining</TableHead>
+                          <TableHead>Redeemed</TableHead>
+                          <TableHead>Delivered To</TableHead>
+                          <TableHead>Delivery Date</TableHead>
                         </TableRow>
                       </TableHeader>
                       <TableBody>
@@ -796,11 +697,12 @@ async function handleCSVImport(includeAll: boolean) {
                                 </div>
                               )}
                             </TableCell>
-                            <TableCell className="font-medium text-sm">{row.store || <span className="text-muted-foreground italic">—</span>}</TableCell>
+                            <TableCell className="font-medium text-sm">{row.vendor || <span className="text-muted-foreground italic">—</span>}</TableCell>
                             <TableCell className="text-sm">{row.last4 || <span className="text-muted-foreground italic">—</span>}</TableCell>
-                            <TableCell className="text-sm">{row.amount ? `$${parseFloat(row.amount).toFixed(2)}` : <span className="text-muted-foreground italic">—</span>}</TableCell>
-                            <TableCell className="text-sm">{row.addedBy || <span className="text-muted-foreground italic">—</span>}</TableCell>
-                            <TableCell className="text-xs text-muted-foreground">{row.notes || "—"}</TableCell>
+                            <TableCell className="text-sm">{row.remaining ? `$${parseFloat(row.remaining.replace(/[^0-9.-]+/g, "")).toFixed(2)}` : <span className="text-muted-foreground italic">—</span>}</TableCell>
+                            <TableCell className="text-sm">{row.redeemed ? `$${parseFloat(row.redeemed.replace(/[^0-9.-]+/g, "")).toFixed(2)}` : <span className="text-muted-foreground italic">—</span>}</TableCell>
+                            <TableCell className="text-sm">{row.delivered_to || <span className="text-muted-foreground italic">—</span>}</TableCell>
+                            <TableCell className="text-xs text-muted-foreground">{row.delivery_date || "—"}</TableCell>
                           </TableRow>
                         ))}
                       </TableBody>
