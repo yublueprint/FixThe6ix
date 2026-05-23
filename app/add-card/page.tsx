@@ -64,7 +64,7 @@ function parseCSV(text: string): CSVRow[] {
   const lines = text.trim().split(/\r?\n/)
   if (lines.length === 0) return []
 
-  const headers = lines[0].toLowerCase().split(",").map(h => h.trim())
+  const headers = splitCSV(lines[0]).map(h => h.toLowerCase().trim())
   const col = {
     vendor: headers.indexOf("vendor"),
     last4: headers.indexOf("last4"),
@@ -76,7 +76,7 @@ function parseCSV(text: string): CSVRow[] {
 
   const data = lines.slice(1)
   return data.filter(l => l.trim()).map((line, i) => {
-    const parts = line.split(",").map(p => p.trim())
+    const parts = splitCSV(line).map(p => p.trim())
 
     const vendor = col.vendor !== -1 ? parts[col.vendor] || "" : ""
     const last4 = col.last4 !== -1 ? parts[col.last4] || "" : ""
@@ -111,7 +111,34 @@ function parseCSV(text: string): CSVRow[] {
       errors,
     } as CSVRow
   })
+
+  function splitCSV(line: string): string[] {
+    const out: string[] = []
+    let cur = ""
+    let inQuotes = false
+
+    for (let i = 0; i < line.length; i++) {
+      const c = line[i]
+      const next = line[i + 1]
+
+      if (c === '"' && next === '"') {
+        cur += '"'
+        i++
+      } else if (c === '"') {
+        inQuotes = !inQuotes
+      } else if (c === ',' && !inQuotes) {
+        out.push(cur)
+        cur = ""
+      } else {
+        cur += c
+      }
+    }
+
+    out.push(cur)
+    return out
+  }
 }
+
 
 // ── Store Combobox ─────────────────────────────────────────────────────────────
 
