@@ -130,30 +130,7 @@ export default function HomePage() {
         <div className="flex flex-1 flex-col overflow-y-auto overflow-x-hidden">
           <div className="flex flex-col gap-6 p-4 sm:p-6">
 
-            {/* ── Quick Actions ── */}
-            <div className="flex flex-col gap-3">
-              <p className="text-base font-medium text-[#525252]">Quick Actions</p>
-              <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-                {([
-                  { href: "/cards",       icon: Add01Icon,           label: "Add Gift Cards",   desc: "Active cards" },
-                  { href: "/inventory",   icon: ShoppingBasket01Icon, label: "Record Spend",     desc: "Log a purchase made with a gift card" },
-                  { href: "/donations",   icon: GiveBloodIcon,        label: "Record Donation",  desc: "Give a card to a recipient in need" },
-                  { href: "/inventory",   icon: Archive01Icon,        label: "View Inventory",   desc: "Browse all cards by store and category" },
-                ] as const).map(({ href, icon, label, desc }) => (
-                  <Link key={label} href={href} className="block h-full">
-                    <div className="h-full bg-[#fafafa] rounded-[18px] shadow-[0px_0px_0px_1px_rgba(10,10,10,0.1),0px_1px_2px_0px_rgba(0,0,0,0.05)] pt-8 sm:pt-[58px] pb-6 px-6 flex flex-col gap-2 hover:bg-[#f0f0f0] transition-colors cursor-pointer">
-                      <div className="bg-[rgba(0,133,200,0.1)] rounded-[10px] size-10 flex items-center justify-center shrink-0">
-                        <HugeiconsIcon icon={icon} strokeWidth={2} className="size-5 text-[#0085c8]" />
-                      </div>
-                      <div>
-                        <p className="text-[16px] font-medium text-[#404040]">{label}</p>
-                        <p className="text-[14px] text-[#737373] mt-0.5">{desc}</p>
-                      </div>
-                    </div>
-                  </Link>
-                ))}
-              </div>
-            </div>
+            
 
             {/* ── Summary ── */}
             <div className="flex flex-col gap-3">
