@@ -9,9 +9,6 @@ import { Separator } from "@/components/ui/separator"
 import {
   Table, TableBody, TableCell, TableHead, TableHeader, TableRow,
 } from "@/components/ui/table"
-import {
-  Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
-} from "@/components/ui/select"
 import { HugeiconsIcon } from "@hugeicons/react"
 import {
   Add01Icon, ShoppingBasket01Icon, GiveBloodIcon, Archive01Icon,
@@ -253,17 +250,20 @@ export default function HomePage() {
                     className="w-full h-8 pl-8 pr-3 text-sm border border-[#e2e8f0] rounded-[6px] bg-white text-[#0a0a0a] placeholder:text-[#a3a3a3] focus:outline-none focus:ring-1 focus:ring-[#0f172a]"
                   />
                 </div>
-                <div className="flex items-center gap-1.5">
-                  <Select value={activeCategory} onValueChange={handleCategoryChange}>
-                    <SelectTrigger size="sm">
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {CATEGORIES.map(cat => (
-                        <SelectItem key={cat} value={cat}>{cat}</SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
+                <div className="flex items-center gap-1.5 overflow-x-auto pb-1 sm:pb-0 scrollbar-hide">
+                  {CATEGORIES.map((cat) => (
+                    <button
+                      key={cat}
+                      onClick={() => handleCategoryChange(cat)}
+                      className={`px-3 py-1.5 text-xs font-medium rounded-full border transition-all duration-200 whitespace-nowrap ${
+                        activeCategory === cat 
+                          ? "bg-[#0a0a0a] text-white border-[#0a0a0a]" 
+                          : "bg-white text-[#525252] border-[#e2e8f0] hover:bg-[#f5f5f5] hover:border-[#cbd5e1]"
+                      }`}
+                    >
+                      {cat}
+                    </button>
+                  ))}
                 </div>
                 <p className="text-xs text-[#737373] ml-auto">
                   {filteredStores.length} store{filteredStores.length !== 1 ? "s" : ""}
