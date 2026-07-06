@@ -36,6 +36,7 @@ export function NavSecondary({
                   isActive={isActive}
                   render={<Link href={item.url} />}
                   className="flex items-center gap-2"
+                  tooltip={item.title}
                 >
                   {item.icon}
                   <span>{item.title}</span>
