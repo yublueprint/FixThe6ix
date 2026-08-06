@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { Prisma } from "@prisma/client";
 import { prisma } from "@/lib/prisma";
+import { requireAuth } from "@/lib/auth-guard";
 import { getStores, postStore } from "./zodValidation";
 
 /**
@@ -8,6 +9,9 @@ import { getStores, postStore } from "./zodValidation";
  * Lists stores, optionally filtered by query params `name` (partial, case-insensitive) and/or `category` (exact enum match).
  */
 export async function GET(request: Request) {
+  const { user, response } = await requireAuth();
+  if (!user) return response!;
+
   try {
     // Read optional filters from the URL (?name=...&category=...)
     const { searchParams } = new URL(request.url);
@@ -53,6 +57,9 @@ export async function GET(request: Request) {
  * Creates a store. Body must include `name` and `category`; `logoUrl` is optional (must be a valid URL if present).
  */
 export async function POST(request: Request) {
+  const { user, response } = await requireAuth();
+  if (!user) return response!;
+
   try {
     // Parse JSON body and normalize optional logo field
     const body = await request.json();

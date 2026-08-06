@@ -1,9 +1,12 @@
 "use client"
 
 import * as React from "react"
+import { useEffect, useState } from "react"
 
 import { NavMain } from "@/components/nav-main"
 import { NavSecondary } from "@/components/nav-secondary"
+import { NavUser } from "@/components/nav-user"
+import { createClient } from "@/lib/supabase/client"
 import {
   Sidebar,
   SidebarContent,
@@ -12,6 +15,7 @@ import {
   SidebarMenu,
   SidebarMenuButton,
   SidebarMenuItem,
+  SidebarRail,
 } from "@/components/ui/sidebar"
 import { HugeiconsIcon } from "@hugeicons/react"
 import {
@@ -21,8 +25,9 @@ import {
   Archive01Icon,
   GiveBloodIcon,
   Settings05Icon,
-  HelpCircleIcon,
   File01Icon,
+  UserMultipleIcon,
+  Logout01Icon,
 } from "@hugeicons/core-free-icons"
 
 const data = {
@@ -50,26 +55,59 @@ const data = {
   ],
   navSecondary: [
     {
-      title: "Settings",
-      url: "#",
+      title: "Export Data",
+      url: "#export",
+      icon: <HugeiconsIcon icon={File01Icon} strokeWidth={2} />,
+    },
+    {
+      title: "Account Settings",
+      url: "/settings",
       icon: <HugeiconsIcon icon={Settings05Icon} strokeWidth={2} />,
     },
     {
-      title: "Help",
-      url: "#",
-      icon: <HugeiconsIcon icon={HelpCircleIcon} strokeWidth={2} />,
-    },
-    {
-      title: "Export Data",
-      url: "#",
-      icon: <HugeiconsIcon icon={File01Icon} strokeWidth={2} />,
+      title: "Log out",
+      url: "#logout",
+      icon: <HugeiconsIcon icon={Logout01Icon} strokeWidth={2} />,
     },
   ],
 }
 
 export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
+  const [user, setUser] = useState<any>(null)
+  const [role, setRole] = useState<string>("VOLUNTEER")
+  const supabase = createClient()
+
+  useEffect(() => {
+    async function loadUser() {
+      const { data: { user: authUser } } = await supabase.auth.getUser()
+      if (authUser) {
+        // Fetch full role from our DB
+        fetch(`/api/users/${authUser.id}`)
+          .then(res => res.json())
+          .then(data => {
+            if (data?.user) setRole(data.user.role)
+          })
+          .catch(console.error)
+        
+        setUser({
+          ...authUser,
+          name: authUser.user_metadata?.full_name || "",
+          email: authUser.email || "",
+          avatar: authUser.user_metadata?.avatar_url || "",
+        })
+      }
+    }
+    loadUser()
+  }, [])
+
+  const adminNav = (role === "ADMIN" || role === "SUPER_ADMIN") ? [{
+    title: "User Management",
+    url: "/admin/users",
+    icon: <HugeiconsIcon icon={UserMultipleIcon} strokeWidth={2} />,
+  }] : []
+
   return (
-    <Sidebar collapsible="offcanvas" {...props}>
+    <Sidebar collapsible="icon" {...props}>
       <SidebarHeader>
         <SidebarMenu>
           <SidebarMenuItem>
@@ -84,10 +122,13 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
         </SidebarMenu>
       </SidebarHeader>
       <SidebarContent>
-        <NavMain items={data.navMain} />
+        <NavMain items={[...data.navMain, ...adminNav]} />
         <NavSecondary items={data.navSecondary} className="mt-auto" />
       </SidebarContent>
-      <SidebarFooter />
+      <SidebarFooter>
+        {user && <NavUser user={user} />}
+      </SidebarFooter>
+      <SidebarRail />
     </Sidebar>
   )
 }

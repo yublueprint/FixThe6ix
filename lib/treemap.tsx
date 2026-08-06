@@ -1,20 +1,35 @@
-export const STORE_CATEGORIES: Record<string, string> = {
-  "Walmart": "Grocery", "Target": "Grocery", "Kroger": "Grocery",
-  "Costco": "Grocery", "Whole Foods": "Grocery", "Safeway": "Grocery",
-  "Trader Joe's": "Grocery", "McDonald's": "Fast Food", "Starbucks": "Fast Food",
-  "Subway": "Fast Food", "Chipotle": "Fast Food", "Panera Bread": "Fast Food",
-  "Dunkin'": "Fast Food", "Taco Bell": "Fast Food", "Chick-fil-A": "Fast Food",
-  "Olive Garden": "Fast Food", "Old Navy": "Clothing", "Gap": "Clothing",
-  "TJ Maxx": "Clothing", "Kohl's": "Clothing", "Macy's": "Clothing",
-  "Amazon": "Other", "CVS Pharmacy": "Other", "Best Buy": "Other",
-  "Home Depot": "Other",
+/**
+ * Maps the Prisma StoreCategory enum to a human-readable display label.
+ */
+export const CATEGORY_LABELS: Record<string, string> = {
+  FAST_FOOD: "Fast Food",
+  GROCERY: "Grocery",
+  CLOTHING: "Clothing",
+  RESTAURANT: "Restaurant",
+  PHARMACY: "Pharmacy",
+  ELECTRONICS: "Electronics",
+  HOME_GOODS: "Home Goods",
+  ONLINE: "Online",
+  OTHER: "Other",
+}
+
+/**
+ * Returns a human-readable category label for a DB enum value.
+ */
+export function categoryLabel(dbCategory: string): string {
+  return CATEGORY_LABELS[dbCategory] ?? "Other"
 }
 
 export const CATEGORY_RAW: Record<string, string> = {
-  "Grocery":   "#22c55e",
-  "Fast Food": "#f97316",
-  "Clothing":  "#8b5cf6",
-  "Other":     "#3b82f6",
+  "Grocery":     "#22c55e",
+  "Fast Food":   "#f97316",
+  "Clothing":    "#8b5cf6",
+  "Restaurant":  "#ef4444",
+  "Pharmacy":    "#06b6d4",
+  "Electronics": "#3b82f6",
+  "Home Goods":  "#f59e0b",
+  "Online":      "#8b5cf6",
+  "Other":       "#3b82f6",
 }
 
 export function TreemapCell(props: any) {

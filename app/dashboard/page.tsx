@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useMemo, type ReactNode } from "react"
+import { useState, useEffect, useMemo, type ReactNode } from "react"
 import Link from "next/link"
 import { Treemap, ResponsiveContainer, Tooltip } from "recharts"
 import { AppSidebar } from "@/components/app-sidebar"
@@ -17,8 +17,23 @@ import {
   Add01Icon, ShoppingBasket01Icon, GiveBloodIcon, Archive01Icon,
   Search01Icon,
 } from "@hugeicons/core-free-icons"
-import { STORE_CATEGORIES, CATEGORY_RAW, TreemapCell } from "@/lib/treemap"
-import redemptionData from "../inventory/data.json"
+import { categoryLabel, CATEGORY_RAW, TreemapCell } from "@/lib/treemap"
+
+// ── Types ─────────────────────────────────────────────────────────────────────
+
+type Store = {
+  id: string
+  name: string
+  category: string
+}
+
+type GiftCard = {
+  id: string
+  store: Store
+  initialAmount: number
+  remainingAmount: number
+  status: string
+}
 
 // ── Constants ─────────────────────────────────────────────────────────────────
 
@@ -32,7 +47,7 @@ function PagBtn({ onClick, disabled, children }: { onClick: () => void; disabled
     <button
       onClick={onClick}
       disabled={disabled}
-      className="w-8 h-8 flex items-center justify-center rounded border border-[#e2e8f0] text-sm text-[#525252] disabled:opacity-40 disabled:cursor-not-allowed hover:bg-[#f1f5f9] transition-colors"
+      className="w-8 h-8 flex items-center justify-center rounded border border-border text-sm text-muted-foreground disabled:opacity-40 disabled:cursor-not-allowed hover:bg-accent transition-colors"
     >
       {children}
     </button>
@@ -42,18 +57,27 @@ function PagBtn({ onClick, disabled, children }: { onClick: () => void; disabled
 // ── Page ──────────────────────────────────────────────────────────────────────
 
 export default function HomePage() {
+  const [cards, setCards] = useState<GiftCard[]>([])
   const [activeCategory, setActiveCategory] = useState("All")
   const [searchQuery, setSearchQuery] = useState("")
   const [page, setPage] = useState(1)
   const [rowsPerPage, setRowsPerPage] = useState(10)
 
-  const cards = redemptionData.cards
+  useEffect(() => {
+    fetch("/api/gift-cards")
+      .then(res => res.json())
+      .then(data => {
+        if (Array.isArray(data)) setCards(data)
+        else setCards([])
+      })
+      .catch(console.error)
+  }, [])
 
   // Summary stats
   const totalCards = cards.length
-  const totalRemaining = cards.reduce((s, c) => s + c.remainingBalance, 0)
-  const totalRedeemed = cards.reduce((s, c) => s + (c.initialBalance - c.remainingBalance), 0)
-  const activeCount = cards.filter(c => c.status === "Active").length
+  const totalRemaining = cards.reduce((s, c) => s + Number(c.remainingAmount), 0)
+  const totalRedeemed = cards.reduce((s, c) => s + (Number(c.initialAmount) - Number(c.remainingAmount)), 0)
+  const activeCount = cards.filter(c => c.status === "ACTIVE").length
 
   // Per-store breakdown
   const storeBreakdown = useMemo(() => {
@@ -61,14 +85,15 @@ export default function HomePage() {
       store: string; category: string; count: number; remaining: number; redeemed: number
     }>()
     for (const c of cards) {
-      const cat = STORE_CATEGORIES[c.store] ?? "Other"
-      if (!map.has(c.store)) {
-        map.set(c.store, { store: c.store, category: cat, count: 0, remaining: 0, redeemed: 0 })
+      const storeName = c.store.name
+      const cat = categoryLabel(c.store.category)
+      if (!map.has(storeName)) {
+        map.set(storeName, { store: storeName, category: cat, count: 0, remaining: 0, redeemed: 0 })
       }
-      const e = map.get(c.store)!
+      const e = map.get(storeName)!
       e.count += 1
-      e.remaining += c.remainingBalance
-      e.redeemed += c.initialBalance - c.remainingBalance
+      e.remaining += Number(c.remainingAmount)
+      e.redeemed += Number(c.initialAmount) - Number(c.remainingAmount)
     }
     return Array.from(map.values()).sort((a, b) => b.remaining - a.remaining)
   }, [cards])
@@ -119,11 +144,11 @@ export default function HomePage() {
       <SidebarInset className="min-w-0 overflow-x-hidden">
 
         {/* ── Header ── */}
-        <div className="border-b h-12 flex items-center shrink-0 px-0">
+        <div className="border-b h-12 flex items-center shrink-0 px-0 bg-background">
           <div className="flex items-center gap-4 pl-5 w-full">
-            <SidebarTrigger className="bg-white rounded-[6px] p-2 size-8 flex items-center justify-center" />
-            <Separator orientation="vertical" className="h-4 bg-[#e5e5e5]" />
-            <span className="font-medium text-[16px] text-[#0a0a0a]">Home</span>
+            <SidebarTrigger className="bg-card rounded-[6px] p-2 size-8 flex items-center justify-center border shadow-sm" />
+            <Separator orientation="vertical" className="h-4" />
+            <span className="font-medium text-base text-foreground">Home</span>
           </div>
         </div>
 
@@ -132,7 +157,7 @@ export default function HomePage() {
 
             {/* ── Quick Actions ── */}
             <div className="flex flex-col gap-3">
-              <p className="text-base font-medium text-[#525252]">Quick Actions</p>
+              <p className="text-base font-medium text-muted-foreground">Quick Actions</p>
               <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
                 {([
                   { href: "/cards",       icon: Add01Icon,           label: "Add Gift Cards",   desc: "Active cards" },
@@ -141,13 +166,13 @@ export default function HomePage() {
                   { href: "/inventory",   icon: Archive01Icon,        label: "View Inventory",   desc: "Browse all cards by store and category" },
                 ] as const).map(({ href, icon, label, desc }) => (
                   <Link key={label} href={href} className="block h-full">
-                    <div className="h-full bg-[#fafafa] rounded-[18px] shadow-[0px_0px_0px_1px_rgba(10,10,10,0.1),0px_1px_2px_0px_rgba(0,0,0,0.05)] pt-8 sm:pt-[58px] pb-6 px-6 flex flex-col gap-2 hover:bg-[#f0f0f0] transition-colors cursor-pointer">
-                      <div className="bg-[rgba(0,133,200,0.1)] rounded-[10px] size-10 flex items-center justify-center shrink-0">
-                        <HugeiconsIcon icon={icon} strokeWidth={2} className="size-5 text-[#0085c8]" />
+                    <div className="h-full bg-card rounded-[18px] shadow-sm border border-border pt-8 sm:pt-[58px] pb-6 px-6 flex flex-col gap-2 hover:bg-accent hover:border-primary/50 transition-colors cursor-pointer">
+                      <div className="bg-transparent rounded-[10px] size-10 flex items-center shrink-0">
+                        <HugeiconsIcon icon={icon} strokeWidth={2.5} className="size-6 text-primary" />
                       </div>
-                      <div>
-                        <p className="text-[16px] font-medium text-[#404040]">{label}</p>
-                        <p className="text-[14px] text-[#737373] mt-0.5">{desc}</p>
+                      <div className="mt-2">
+                        <p className="text-base font-medium text-foreground">{label}</p>
+                        <p className="text-sm text-muted-foreground mt-0.5">{desc}</p>
                       </div>
                     </div>
                   </Link>
@@ -157,65 +182,65 @@ export default function HomePage() {
 
             {/* ── Summary ── */}
             <div className="flex flex-col gap-3">
-              <p className="text-base font-medium text-[#525252]">Summary</p>
+              <p className="text-base font-medium text-muted-foreground">Summary</p>
               <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
 
                 {/* Total Cards */}
-                <div className="border border-[#e2e8f0] rounded-[12px] p-5">
+                <div className="border border-border bg-card rounded-[12px] p-5 shadow-sm">
                   <div className="flex items-center justify-between">
-                    <p className="text-xs font-medium text-[#737373]">Total Cards</p>
-                    <span className="bg-[#bbf7d0] text-[#166534] text-xs font-medium px-2 py-0.5 rounded-full shrink-0">
+                    <p className="text-xs font-medium text-muted-foreground">Total Cards</p>
+                    <span className="bg-green-100 text-green-800 dark:bg-green-900/50 dark:text-green-400 text-xs font-medium px-2 py-0.5 rounded-full shrink-0">
                       +{activeCount}
                     </span>
                   </div>
-                  <p className="text-[30px] font-semibold text-[#0a0a0a] mt-1 leading-none">{totalCards}</p>
-                  <p className="text-xs text-[#737373] mt-2">Active cards</p>
+                  <h3 className="text-3xl font-semibold text-foreground mt-1 leading-none">{totalCards}</h3>
+                  <p className="text-xs text-muted-foreground mt-2">Active cards</p>
                 </div>
 
                 {/* Remaining Value */}
-                <div className="border border-[#e2e8f0] rounded-[12px] p-5">
+                <div className="border border-border bg-card rounded-[12px] p-5 shadow-sm">
                   <div className="flex items-center justify-between">
-                    <p className="text-xs font-medium text-[#737373]">Remaining Value</p>
-                    <span className="bg-[#bbf7d0] text-[#166534] text-xs font-medium px-2 py-0.5 rounded-full shrink-0">
+                    <p className="text-xs font-medium text-muted-foreground">Remaining Value</p>
+                    <span className="bg-green-100 text-green-800 dark:bg-green-900/50 dark:text-green-400 text-xs font-medium px-2 py-0.5 rounded-full shrink-0">
                       +{storeBreakdown.length}
                     </span>
                   </div>
-                  <p className="text-[30px] font-semibold text-[#0a0a0a] mt-1 leading-none">
+                  <h3 className="text-3xl font-semibold text-foreground mt-1 leading-none">
                     ${Math.round(totalRemaining).toLocaleString()}
-                  </p>
-                  <p className="text-xs text-[#737373] mt-2">Available across all cards</p>
+                  </h3>
+                  <p className="text-xs text-muted-foreground mt-2">Available across all cards</p>
                 </div>
 
                 {/* Total Redeemed */}
-                <div className="border border-[#e2e8f0] rounded-[12px] p-5">
+                <div className="border border-border bg-card rounded-[12px] p-5 shadow-sm">
                   <div className="flex items-center justify-between">
-                    <p className="text-xs font-medium text-[#737373]">Total Redeemed</p>
-                    <span className="bg-[#bbf7d0] text-[#166534] text-xs font-medium px-2 py-0.5 rounded-full shrink-0">
+                    <p className="text-xs font-medium text-muted-foreground">Total Redeemed</p>
+                    <span className="bg-green-100 text-green-800 dark:bg-green-900/50 dark:text-green-400 text-xs font-medium px-2 py-0.5 rounded-full shrink-0">
                       +{storeBreakdown.length}
                     </span>
                   </div>
-                  <p className="text-[30px] font-semibold text-[#0a0a0a] mt-1 leading-none">
+                  <h3 className="text-3xl font-semibold text-foreground mt-1 leading-none">
                     ${Math.round(totalRedeemed).toLocaleString()}
-                  </p>
-                  <p className="text-xs text-[#737373] mt-2">Total value spent or donated out from all cards</p>
+                  </h3>
+                  <p className="text-xs text-muted-foreground mt-2">Total value spent or donated</p>
                 </div>
 
               </div>
             </div>
 
             {/* ── Value Distribution ── */}
-            <div id="inventory" className="border border-[#e2e8f0] rounded-[12px] overflow-hidden">
+            <div id="inventory" className="border border-border bg-card rounded-[12px] overflow-hidden shadow-sm">
 
               {/* Card header */}
               <div className="px-5 pt-5 pb-4">
-                <p className="text-sm font-semibold text-[#0a0a0a]">Gift Cards by Store</p>
-                <p className="text-xs text-[#737373] mt-0.5">Tile size = remaining balance · hover a tile for details</p>
+                <p className="text-sm font-semibold text-foreground">Gift Cards by Store</p>
+                <p className="text-xs text-muted-foreground mt-0.5">Tile size = remaining balance · hover a tile for details</p>
               </div>
 
               {/* Treemap */}
               <div className="px-5 pb-4">
                 {treemapData.length === 0 ? (
-                  <div className="flex h-[200px] items-center justify-center text-sm text-[#737373]">
+                  <div className="flex h-[200px] items-center justify-center text-sm text-muted-foreground">
                     No remaining balance in this category.
                   </div>
                 ) : (
@@ -232,12 +257,12 @@ export default function HomePage() {
                             if (!active || !payload?.length) return null
                             const d = payload[0].payload
                             return (
-                              <div className="bg-white border border-[#e2e8f0] rounded-[8px] shadow-md px-3 py-2 text-sm min-w-[140px]">
-                                <p className="font-semibold text-[#0a0a0a] mb-1">{d.name}</p>
+                              <div className="bg-popover border border-border rounded-[8px] shadow-md px-3 py-2 text-sm min-w-[140px] text-popover-foreground">
+                                <p className="font-semibold mb-1">{d.name}</p>
                                 <div className="space-y-0.5 text-xs">
-                                  <p className="text-green-600">Remaining: <span className="font-medium">${d.remaining?.toFixed(2)}</span></p>
-                                  <p className="text-orange-500">Redeemed: <span className="font-medium">${d.redeemed?.toFixed(2)}</span></p>
-                                  <p className="text-[#737373] mt-1">{d.category}</p>
+                                  <p className="text-green-600 dark:text-green-400">Remaining: <span className="font-medium">${d.remaining?.toFixed(2)}</span></p>
+                                  <p className="text-orange-500 dark:text-orange-400">Redeemed: <span className="font-medium">${d.redeemed?.toFixed(2)}</span></p>
+                                  <p className="text-muted-foreground mt-1">{d.category}</p>
                                 </div>
                               </div>
                             )
@@ -247,7 +272,7 @@ export default function HomePage() {
                     </ResponsiveContainer>
                     <div className="flex flex-wrap gap-4 mt-3 justify-center">
                       {Object.entries(CATEGORY_RAW).map(([c, color]) => (
-                        <div key={c} className="flex items-center gap-1.5 text-xs text-[#737373]">
+                        <div key={c} className="flex items-center gap-1.5 text-xs text-muted-foreground">
                           <span className="w-2.5 h-2.5 rounded-full" style={{ backgroundColor: color }} />
                           {c}
                         </div>
@@ -258,22 +283,22 @@ export default function HomePage() {
               </div>
 
               {/* Table section */}
-              <div className="mx-4 mb-4 border border-[#e2e8f0] rounded-[8px] overflow-x-auto">
+              <div className="mx-4 mb-4 border border-border rounded-[8px] overflow-x-auto">
 
               {/* Toolbar */}
-              <div className="flex items-center gap-3 px-4 py-3 border-b border-[#e2e8f0] bg-white">
+              <div className="flex items-center gap-3 px-4 py-3 border-b border-border bg-card">
                 <div className="relative flex-1 max-w-xs">
                   <HugeiconsIcon
                     icon={Search01Icon}
                     strokeWidth={1.5}
-                    className="absolute left-2.5 top-1/2 -translate-y-1/2 size-3.5 text-[#a3a3a3] pointer-events-none"
+                    className="absolute left-2.5 top-1/2 -translate-y-1/2 size-3.5 text-muted-foreground pointer-events-none"
                   />
                   <input
                     type="text"
                     placeholder="Search stores…"
                     value={searchQuery}
                     onChange={e => { setSearchQuery(e.target.value); setPage(1) }}
-                    className="w-full h-8 pl-8 pr-3 text-sm border border-[#e2e8f0] rounded-[6px] bg-white text-[#0a0a0a] placeholder:text-[#a3a3a3] focus:outline-none focus:ring-1 focus:ring-[#0f172a]"
+                    className="w-full pl-8 pr-3 py-1.5 bg-background border border-border rounded-[6px] text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-1 focus:ring-ring"
                   />
                 </div>
                 <div className="flex items-center gap-1.5">
@@ -288,35 +313,35 @@ export default function HomePage() {
                     </SelectContent>
                   </Select>
                 </div>
-                <p className="text-xs text-[#737373] ml-auto">
+                <p className="text-xs text-muted-foreground ml-auto">
                   {filteredStores.length} store{filteredStores.length !== 1 ? "s" : ""}
                 </p>
               </div>
 
               <Table>
                 <TableHeader>
-                  <TableRow className="bg-[#fafafa] hover:bg-[#fafafa]">
-                    <TableHead className="text-xs font-medium text-[#737373] py-3">Store</TableHead>
-                    <TableHead className="text-xs font-medium text-[#737373] py-3 text-right">Cards</TableHead>
-                    <TableHead className="text-xs font-medium text-[#737373] py-3 text-right">Remaining Balance</TableHead>
-                    <TableHead className="text-xs font-medium text-[#737373] py-3 text-right">Amount Spent</TableHead>
+                  <TableRow className="bg-muted/50 hover:bg-muted/50">
+                    <TableHead className="text-xs font-medium text-muted-foreground py-3">Store</TableHead>
+                    <TableHead className="text-xs font-medium text-muted-foreground py-3 text-right">Cards</TableHead>
+                    <TableHead className="text-xs font-medium text-muted-foreground py-3 text-right">Remaining Balance</TableHead>
+                    <TableHead className="text-xs font-medium text-muted-foreground py-3 text-right">Amount Spent</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
                   {paginatedStores.length === 0 ? (
                     <TableRow>
-                      <TableCell colSpan={4} className="text-center text-sm text-[#737373] py-10">
+                      <TableCell colSpan={4} className="text-center text-sm text-muted-foreground py-10">
                         No stores match your search.
                       </TableCell>
                     </TableRow>
                   ) : (
                     paginatedStores.map(row => (
-                      <TableRow key={row.store} className="hover:bg-[#fafafa] border-[#e2e8f0]">
+                      <TableRow key={row.store} className="hover:bg-muted/50 border-border">
                         <TableCell className="py-3">
-                          <p className="text-sm font-medium text-[#0a0a0a]">{row.store}</p>
-                          <p className="text-xs text-[#a3a3a3] mt-0.5">{row.category}</p>
+                          <p className="text-sm font-medium text-foreground">{row.store}</p>
+                          <p className="text-xs text-muted-foreground mt-0.5">{row.category}</p>
                         </TableCell>
-                        <TableCell className="text-sm text-[#525252] py-3 text-right align-middle">{row.count}</TableCell>
+                        <TableCell className="text-sm text-muted-foreground py-3 text-right align-middle">{row.count}</TableCell>
                         <TableCell className="text-sm font-medium text-green-600 py-3 text-right align-middle">
                           ${row.remaining.toFixed(2)}
                         </TableCell>
@@ -330,24 +355,24 @@ export default function HomePage() {
               </Table>
 
               {/* Pagination footer */}
-              <div className="flex flex-wrap items-center justify-between gap-2 px-4 py-3 border-t border-[#e2e8f0] bg-white">
-                <p className="text-xs text-[#737373]">
+              <div className="flex flex-wrap items-center justify-between gap-2 px-4 py-3 border-t border-border bg-card">
+                <p className="text-xs text-muted-foreground">
                   {filteredStores.length} result{filteredStores.length !== 1 ? "s" : ""}
                 </p>
                 <div className="flex flex-wrap items-center gap-3">
-                  <div className="flex items-center gap-2 text-xs text-[#737373]">
+                  <div className="flex items-center gap-2 text-xs text-muted-foreground">
                     <span>Rows per page</span>
                     <select
                       value={rowsPerPage}
                       onChange={e => { setRowsPerPage(Number(e.target.value)); setPage(1) }}
-                      className="border border-[#e2e8f0] rounded-[4px] px-1.5 py-0.5 text-xs text-[#0a0a0a] bg-white"
+                      className="border border-border rounded-[4px] px-1.5 py-0.5 text-xs text-foreground bg-background"
                     >
                       {ROWS_PER_PAGE_OPTIONS.map(n => (
                         <option key={n} value={n}>{n}</option>
                       ))}
                     </select>
                   </div>
-                  <p className="text-xs text-[#737373]">Page {safePage} of {totalPages}</p>
+                  <p className="text-xs text-muted-foreground">Page {safePage} of {totalPages}</p>
                   <div className="flex items-center gap-1">
                     <PagBtn onClick={() => setPage(1)} disabled={safePage === 1}>«</PagBtn>
                     <PagBtn onClick={() => setPage(p => Math.max(1, p - 1))} disabled={safePage === 1}>‹</PagBtn>

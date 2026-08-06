@@ -20,49 +20,48 @@ import {
   Search01Icon, ArrowDown01Icon, ArrowUp01Icon,
 ShoppingBasket01Icon, GiveBloodIcon, Delete01Icon, Edit01Icon
 } from "@hugeicons/core-free-icons"
-import { STORE_CATEGORIES } from "@/lib/treemap"
-import {
-  loadPersistedGiftCards,
-  upsertPersistedGiftCard,
-  type PersistedGiftCard,
-} from "@/lib/inventory-persistence"
-import rawData from "./data.json"
+import { cn } from "@/lib/utils"
+import { categoryLabel } from "@/lib/treemap"
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 
-type GiftCard = {
-  id: number
-  store: string
-  last4: string
-  initialBalance: number
-  remainingBalance: number
-  status: string
-  addedDate: string
-  addedBy: string
-  notes?: string
+type Store = {
+  id: string
+  name: string
+  category: string
 }
 
 type Transaction = {
-  id: number
-  cardId: number
-  date: string
-  type: "spend" | "donation"
+  id: string
+  giftCardId: string
+  createdAt: string
+  type: "SPEND" | "DONATION_OUT"
   amount: number
-  volunteer: string
-  recipient: string | null
-  notes: string
+  volunteerName: string | null
+  recipientName: string | null
+  notes: string | null
 }
 
-type DataStore = { cards: GiftCard[]; transactions: Transaction[] }
+type GiftCard = {
+  id: string
+  store: Store
+  lastFourDigits: string
+  initialAmount: number
+  remainingAmount: number
+  status: string
+  createdAt: string
+  notes?: string
+  transactions: Transaction[]
+}
+
+type Volunteer = {
+  id: string
+  name: string
+}
 
 // ── Constants ─────────────────────────────────────────────────────────────────
 
-const VOLUNTEERS = ["Sarah Johnson", "Mike Davis", "Lisa Chen", "James Lee", "Amy Brown"]
 const CATEGORIES = ["All", "Grocery", "Fast Food", "Clothing", "Other"]
-
-function categoryForStore(store: string) {
-  return STORE_CATEGORIES[store] ?? "Other"
-}
 
 function statusStyle(status: string) {
   const normalized = status.toLowerCase()
@@ -82,12 +81,14 @@ function fmt(iso: string) {
 // ── Page ──────────────────────────────────────────────────────────────────────
 
 export default function InventoryPage() {
-  const [data, setData] = React.useState<DataStore>(rawData as DataStore)
+  const [cards, setCards] = React.useState<GiftCard[]>([])
+  const [volunteers, setVolunteers] = React.useState<Volunteer[]>([])
+  const [loading, setLoading] = React.useState(true)
   const [filterStore, setFilterStore] = React.useState("All")
   const [filterCategory, setFilterCategory] = React.useState("All")
   const [searchQuery, setSearchQuery] = React.useState("")
-  const [selectedId, setSelectedId] = React.useState<number | null>(null)
-  const [selectedRows, setSelectedRows] = React.useState<number[]>([])
+  const [selectedId, setSelectedId] = React.useState<string | null>(null)
+  const [selectedRows, setSelectedRows] = React.useState<string[]>([])
 
   // Add gift card form
   const [newStore, setNewStore] = React.useState("")
@@ -115,103 +116,104 @@ export default function InventoryPage() {
 
   // Edit form
   const [showEditSheet, setShowEditSheet] = React.useState(false)
-  const [editCardId, setEditCardId] = React.useState<number | null>(null)
+  const [editCardId, setEditCardId] = React.useState<string | null>(null)
   const [editStore, setEditStore] = React.useState("")
   const [editInitialBalance, setEditInitialBalance] = React.useState("")
   const [editRemainingBalance, setEditRemainingBalance] = React.useState("")
 
   const uniqueStores = React.useMemo(() =>
-    [...new Set(data.cards.map(c => c.store))].sort(), [data.cards])
+    [...new Set(cards.map(c => c.store.name))].sort(), [cards])
 
-  const storeOptions = React.useMemo(() =>
-    [...new Set([...Object.keys(STORE_CATEGORIES), ...uniqueStores])].sort(), [uniqueStores])
+  const storeOptions = React.useMemo(() => uniqueStores, [uniqueStores])
 
   const filteredCards = React.useMemo(() =>
-    data.cards.filter(c => {
-      if (filterStore !== "All" && c.store !== filterStore) return false
-      if (filterCategory !== "All" && categoryForStore(c.store) !== filterCategory) return false
+    cards.filter(c => {
+      if (filterStore !== "All" && c.store.name !== filterStore) return false
+      if (filterCategory !== "All" && categoryLabel(c.store.category) !== filterCategory) return false
       if (searchQuery) {
         const query = searchQuery.toLowerCase().trim()
         const numericQuery = searchQuery.replace(/\D/g, "")
-        const byStore = c.store.toLowerCase().includes(query)
-        const byDigits = numericQuery.length > 0 && c.last4.includes(numericQuery)
+        const byStore = c.store.name.toLowerCase().includes(query)
+        const byDigits = numericQuery.length > 0 && c.lastFourDigits.includes(numericQuery)
         if (!byStore && !byDigits) return false
       }
       return true
-    }), [data.cards, filterStore, filterCategory, searchQuery])
+    }), [cards, filterStore, filterCategory, searchQuery])
 
-  const selectedCard = data.cards.find(c => c.id === selectedId) ?? null
+  const selectedCard = cards.find(c => c.id === selectedId) ?? null
 
   const cardTxns = React.useMemo(() => {
-    if (!selectedId) return []
-    return data.transactions
-      .filter(t => t.cardId === selectedId)
-      .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime())
-  }, [selectedId, data.transactions])
+    if (!selectedId || !selectedCard) return []
+    return selectedCard.transactions
+  }, [selectedId, selectedCard])
 
-  const statsCards = selectedRows.length > 0 ? data.cards.filter(c => selectedRows.includes(c.id)) : data.cards
+  const statsCards = selectedRows.length > 0 ? cards.filter(c => selectedRows.includes(c.id)) : cards
 
   const totalCards = statsCards.length
-  const activeCards = statsCards.filter(c => c.status === "Active").length
-  const totalRemaining = statsCards.reduce((s, c) => s + c.remainingBalance, 0)
-  const totalInitial = statsCards.reduce((s, c) => s + c.initialBalance, 0)
+  const activeCards = statsCards.filter(c => c.status === "ACTIVE").length
+  const totalRemaining = statsCards.reduce((s, c) => s + Number(c.remainingAmount), 0)
+  const totalInitial = statsCards.reduce((s, c) => s + Number(c.initialAmount), 0)
 
-  React.useEffect(() => {
-    const persisted = loadPersistedGiftCards() as GiftCard[]
-    if (persisted.length === 0) return
+  const fetchData = React.useCallback(async () => {
+    fetch("/api/gift-cards")
+      .then(res => res.json())
+      .then(data => {
+        if (Array.isArray(data)) setCards(data)
+        else setCards([])
+      })
+      .catch(console.error)
+      .finally(() => setLoading(false))
 
-    setData(prev => {
-      const prevKeys = new Set(prev.cards.map(c => `${c.store.toLowerCase()}::${c.last4}`))
-      const uniquePersisted = persisted.filter(c => !prevKeys.has(`${c.store.toLowerCase()}::${c.last4}`))
-      if (uniquePersisted.length === 0) return prev
-      return { ...prev, cards: [...uniquePersisted, ...prev.cards] }
-    })
+    fetch("/api/volunteers")
+      .then(res => res.json())
+      .then(data => {
+        if (Array.isArray(data)) setVolunteers(data)
+        else setVolunteers([])
+      })
+      .catch(console.error)
   }, [])
 
-  function handleAddGiftCard() {
+  React.useEffect(() => {
+    fetchData()
+  }, [fetchData])
+
+  async function handleAddGiftCard() {
     setAddErr("")
     setAddSuccess("")
 
-    const store = newStore.trim()
-    const last4 = newLast4.replace(/\D/g, "")
+    const storeName = newStore.trim()
+    const lastFourDigits = newLast4.replace(/\D/g, "")
     const initialAmount = Number(Number(newInitialAmount).toFixed(2))
 
-    if (!store) { setAddErr("Please select a store."); return }
-    if (last4.length !== 4) { setAddErr("Last 4 digits must be exactly 4 numbers."); return }
+    if (!storeName) { setAddErr("Please select a store."); return }
+    if (lastFourDigits.length !== 4) { setAddErr("Last 4 digits must be exactly 4 numbers."); return }
     if (!newInitialAmount || isNaN(initialAmount) || initialAmount <= 0) {
       setAddErr("Please enter a valid initial amount."); return
     }
 
-    const duplicate = data.cards.some(c => c.store === store && c.last4 === last4)
-    if (duplicate) {
-      setAddErr("A card for this store with the same last 4 digits already exists.")
-      return
+    try {
+      const res = await fetch("/api/gift-cards", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ storeName, lastFourDigits, initialAmount, notes: newNotes.trim() }),
+      })
+      if (!res.ok) {
+        const d = await res.json()
+        setAddErr(d.error || "Failed to add gift card")
+        return
+      }
+      setAddSuccess("Gift card added successfully.")
+      setNewStore("")
+      setNewLast4("")
+      setNewInitialAmount("")
+      setNewNotes("")
+      fetchData()
+    } catch (e) {
+      setAddErr("An error occurred")
     }
-
-    const nextId = Math.max(0, ...data.cards.map(c => c.id)) + 1
-    const createdCard: GiftCard = {
-      id: nextId,
-      store,
-      last4,
-      initialBalance: initialAmount,
-      remainingBalance: initialAmount,
-      status: "Active",
-      addedDate: new Date().toISOString(),
-      addedBy: "Admin",
-      notes: newNotes.trim() || undefined,
-    }
-
-    upsertPersistedGiftCard(createdCard as PersistedGiftCard)
-    setData(d => ({ ...d, cards: [createdCard, ...d.cards] }))
-    setSelectedId(createdCard.id)
-    setNewStore("")
-    setNewLast4("")
-    setNewInitialAmount("")
-    setNewNotes("")
-    setAddSuccess("Gift card added successfully.")
   }
 
-  function selectCard(id: number) {
+  function selectCard(id: string) {
     if (selectedId === id) {
       setSelectedId(null)
     } else {
@@ -223,77 +225,104 @@ export default function InventoryPage() {
     }
   }
 
-  function handleSpend() {
+  async function handleSpend() {
     setSpendErr("")
     const amount = Number(Number(spendAmt).toFixed(2))
     if (!spendAmt || isNaN(amount) || amount <= 0) { setSpendErr("Enter a valid amount."); return }
     if (!spendVol) { setSpendErr("Please select a volunteer."); return }
-    if (amount > selectedCard!.remainingBalance) {
-      setSpendErr(`Exceeds remaining balance of $${selectedCard!.remainingBalance.toFixed(2)}.`); return
+    if (amount > selectedCard!.remainingAmount) {
+      setSpendErr(`Exceeds remaining balance of $${Number(selectedCard!.remainingAmount).toFixed(2)}.`); return
     }
-    const newBal = selectedCard!.remainingBalance - amount
-    setData(d => ({
-      cards: d.cards.map(c => c.id === selectedId
-        ? { ...c, remainingBalance: newBal, status: newBal === 0 ? "Used" : c.status }
-        : c),
-      transactions: [...d.transactions, {
-        id: d.transactions.length + 1, cardId: selectedId!, date: new Date().toISOString(),
-        type: "spend", amount, volunteer: spendVol, recipient: null, notes: spendNotes,
-      }],
-    }))
-    setShowSpend(false); setSpendAmt(""); setSpendVol(""); setSpendNotes("")
+    
+    try {
+      const res = await fetch("/api/transactions", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          giftCardId: selectedId,
+          amount,
+          type: "SPEND",
+          volunteerName: spendVol,
+          notes: spendNotes.trim(),
+        }),
+      })
+      if (!res.ok) {
+        const d = await res.json()
+        setSpendErr(d.error || "Failed to record spend")
+        return
+      }
+      setShowSpend(false); setSpendAmt(""); setSpendVol(""); setSpendNotes("")
+      fetchData()
+    } catch (e) {
+      setSpendErr("An error occurred")
+    }
   }
 
-  function handleDonate() {
+  async function handleDonate() {
     setDonateErr("")
     if (!donateVol) { setDonateErr("Please select a volunteer."); return }
     if (!donateRecip.trim()) { setDonateErr("Please enter a recipient name."); return }
     let amount: number
     if (donateFull) {
-      amount = selectedCard!.remainingBalance
+      amount = selectedCard!.remainingAmount
     } else {
       amount = Number(Number(donateAmt).toFixed(2))
       if (!donateAmt || isNaN(amount) || amount <= 0) { setDonateErr("Enter a valid amount."); return }
-      if (amount > selectedCard!.remainingBalance) {
-        setDonateErr(`Exceeds remaining balance of $${selectedCard!.remainingBalance.toFixed(2)}.`); return
+      if (amount > selectedCard!.remainingAmount) {
+        setDonateErr(`Exceeds remaining balance of $${Number(selectedCard!.remainingAmount).toFixed(2)}.`); return
       }
     }
-    const newBal = selectedCard!.remainingBalance - amount
-    setData(d => ({
-      cards: d.cards.map(c => c.id === selectedId
-        ? { ...c, remainingBalance: newBal, status: newBal === 0 ? "Donated" : c.status }
-        : c),
-      transactions: [...d.transactions, {
-        id: d.transactions.length + 1, cardId: selectedId!, date: new Date().toISOString(),
-        type: "donation", amount, volunteer: donateVol, recipient: donateRecip, notes: donateNotes,
-      }],
-    }))
-    setShowDonate(false)
-    setDonateAmt(""); setDonateRecip(""); setDonateVol(""); setDonateNotes(""); setDonateFull(true)
-  }
-
-  function deleteCard(id: number) {
-    if (confirm("Are you sure you want to delete this gift card?")) {
-      setData(d => ({
-        cards: d.cards.filter(c => c.id !== id),
-        transactions: d.transactions.filter(t => t.cardId !== id)
-      }));
-      if (selectedId === id) setSelectedId(null);
+    
+    try {
+      const res = await fetch("/api/transactions", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          giftCardId: selectedId,
+          amount,
+          type: "DONATION_OUT",
+          volunteerName: donateVol,
+          recipientName: donateRecip.trim(),
+          notes: donateNotes.trim(),
+        }),
+      })
+      if (!res.ok) {
+        const d = await res.json()
+        setDonateErr(d.error || "Failed to record donation")
+        return
+      }
+      setShowDonate(false)
+      setDonateAmt(""); setDonateRecip(""); setDonateVol(""); setDonateNotes(""); setDonateFull(true)
+      fetchData()
+    } catch (e) {
+      setDonateErr("An error occurred")
     }
   }
 
-  function openEditCard(id: number) {
-    const card = data.cards.find(c => c.id === id);
+  async function deleteCard(id: string) {
+    if (confirm("Are you sure you want to delete this gift card?")) {
+      try {
+        await fetch(`/api/gift-cards/${id}`, { method: "DELETE" })
+        if (selectedId === id) setSelectedId(null)
+        fetchData()
+      } catch (e) {
+        console.error(e)
+      }
+    }
+  }
+
+  function openEditCard(id: string) {
+    const card = cards.find(c => c.id === id);
     if (card) {
       setEditCardId(id);
-      setEditStore(card.store);
-      setEditInitialBalance(card.initialBalance.toString());
-      setEditRemainingBalance(card.remainingBalance.toString());
+      setEditStore(card.store.name);
+      setEditInitialBalance(card.initialAmount.toString());
+      setEditRemainingBalance(card.remainingAmount.toString());
       setShowEditSheet(true);
     }
   }
 
-  function saveEditCard() {
+  async function saveEditCard() {
     if (!editCardId) return;
     const initial = parseFloat(editInitialBalance);
     const remaining = parseFloat(editRemainingBalance);
@@ -302,17 +331,21 @@ export default function InventoryPage() {
       return;
     }
     if (confirm("Are you sure you want to save these changes?")) {
-      setData(d => ({
-        ...d,
-        cards: d.cards.map(c => c.id === editCardId ? {
-          ...c,
-          store: editStore,
-          initialBalance: initial,
-          remainingBalance: remaining,
-          status: remaining === 0 ? "Used" : c.status
-        } : c)
-      }));
-      setShowEditSheet(false);
+      try {
+        await fetch(`/api/gift-cards/${editCardId}`, {
+          method: "PATCH",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            storeName: editStore,
+            initialAmount: initial,
+            remainingAmount: remaining,
+          }),
+        })
+        setShowEditSheet(false);
+        fetchData()
+      } catch (e) {
+        console.error(e)
+      }
     }
   }
 
@@ -322,11 +355,11 @@ export default function InventoryPage() {
       <SidebarInset>
 
         {/* ── Header ── */}
-        <div className="border-b h-12 flex items-center shrink-0">
+        <div className="border-b border-border h-12 flex items-center shrink-0 bg-background">
           <div className="flex items-center gap-4 pl-5">
-            <SidebarTrigger className="bg-white rounded-[6px] p-2 size-8 flex items-center justify-center" />
-            <Separator orientation="vertical" className="h-4 bg-[#e5e5e5]" />
-            <span className="font-medium text-[16px] text-[#0a0a0a]">Card Inventory</span>
+            <SidebarTrigger className="bg-card rounded-[6px] p-2 size-8 flex items-center justify-center shadow-sm border" />
+            <Separator orientation="vertical" className="h-4" />
+            <span className="font-medium text-base text-foreground">Card Inventory</span>
           </div>
         </div>
 
@@ -341,23 +374,23 @@ export default function InventoryPage() {
                 { label: "Total Remaining", value: `$${totalRemaining.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`, sub: selectedRows.length > 0 ? "Available in selected cards" : "Available across all cards" },
                 { label: "Total Initial", value: `$${totalInitial.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`, sub: selectedRows.length > 0 ? "Value of selected cards" : "Value of all cards received" },
               ].map(s => (
-                <div key={s.label} className="border border-[#e2e8f0] rounded-[12px] p-5">
-                  <p className="text-xs font-medium text-[#737373]">{s.label}</p>
-                  <p className="text-[30px] font-semibold text-[#0a0a0a] mt-1 leading-none">{s.value}</p>
-                  <p className="text-xs text-[#737373] mt-2">{s.sub}</p>
+                <div key={s.label} className="border border-border rounded-[12px] p-5 bg-card">
+                  <p className="text-xs font-medium text-muted-foreground">{s.label}</p>
+                  <p className="text-[30px] font-semibold text-foreground mt-1 leading-none">{s.value}</p>
+                  <p className="text-xs text-muted-foreground mt-2">{s.sub}</p>
                 </div>
               ))}
             </div>
 
             {/* ── Add Gift Card ── */}
-            <div className="bg-white border border-[#e2e8f0] rounded-[12px] p-5">
+            <div className="bg-card border border-border rounded-[12px] p-5">
               <div className="mb-4">
-                <p className="text-sm font-semibold text-[#0a0a0a]">Add Gift Card</p>
-                <p className="text-xs text-[#737373] mt-0.5">Create a new card entry for inventory tracking.</p>
+                <p className="text-sm font-semibold text-foreground">Add Gift Card</p>
+                <p className="text-xs text-muted-foreground mt-0.5">Create a new card entry for inventory tracking.</p>
               </div>
               <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
                 <div className="space-y-1.5">
-                  <Label className="text-xs font-medium text-[#737373]">Store</Label>
+                  <Label className="text-xs font-medium text-muted-foreground">Store</Label>
                   <Input
                     list="store-options"
                     placeholder="Search store"
@@ -370,7 +403,7 @@ export default function InventoryPage() {
                   </datalist>
                 </div>
                 <div className="space-y-1.5">
-                  <Label className="text-xs font-medium text-[#737373]">Last 4 digits</Label>
+                  <Label className="text-xs font-medium text-muted-foreground">Last 4 digits</Label>
                   <Input
                     inputMode="numeric"
                     placeholder="0000"
@@ -380,7 +413,7 @@ export default function InventoryPage() {
                   />
                 </div>
                 <div className="space-y-1.5">
-                  <Label className="text-xs font-medium text-[#737373]">Initial amount ($)</Label>
+                  <Label className="text-xs font-medium text-muted-foreground">Initial amount ($)</Label>
                   <Input
                     type="number"
                     min="0.01"
@@ -392,7 +425,7 @@ export default function InventoryPage() {
                   />
                 </div>
                 <div className="space-y-1.5">
-                  <Label className="text-xs font-medium text-[#737373]">Optional notes</Label>
+                  <Label className="text-xs font-medium text-muted-foreground">Optional notes</Label>
                   <Textarea
                     placeholder="Any context for this card"
                     value={newNotes}
@@ -401,12 +434,12 @@ export default function InventoryPage() {
                   />
                 </div>
               </div>
-              {addErr && <p className="text-xs text-red-500 mt-3">{addErr}</p>}
-              {addSuccess && <p className="text-xs text-[#166534] mt-3">{addSuccess}</p>}
+              {addErr && <p className="text-xs text-destructive mt-3">{addErr}</p>}
+              {addSuccess && <p className="text-xs text-green-600 dark:text-green-400 mt-3">{addSuccess}</p>}
               <div className="flex items-center gap-2 mt-4">
                 <button
                   onClick={handleAddGiftCard}
-                  className="text-sm font-medium bg-[#0a0a0a] text-white px-3.5 py-1.5 rounded-[6px] hover:bg-[#262626] transition-colors"
+                  className="text-sm font-medium bg-primary text-primary-foreground px-3.5 py-1.5 rounded-[6px] hover:bg-primary-hover transition-colors"
                 >
                   Add Gift Card
                 </button>
@@ -414,16 +447,16 @@ export default function InventoryPage() {
             </div>
 
             {/* ── Inventory card ── */}
-            <div className="bg-white border border-[#e2e8f0] rounded-[12px] overflow-hidden">
+            <div className="bg-card border border-border rounded-[12px] overflow-hidden">
 
               {/* Card header + search filters */}
-              <div className="px-6 py-4 border-b border-[#e2e8f0]">
+              <div className="px-6 py-4 border-b border-border">
                 <div className="flex items-center justify-between mb-3">
                   <div>
-                    <p className="text-sm font-semibold text-[#0a0a0a]">Gift Card Inventory</p>
-                    <p className="text-xs text-[#737373] mt-0.5">Click a row to record a spend, donation, or view history</p>
+                    <p className="text-sm font-semibold text-foreground">Gift Card Inventory</p>
+                    <p className="text-xs text-muted-foreground mt-0.5">Click a row to record a spend, donation, or view history</p>
                   </div>
-                  <p className="text-xs text-[#737373]">{filteredCards.length} of {data.cards.length} cards</p>
+                  <p className="text-xs text-muted-foreground">{filteredCards.length} of {cards.length} cards</p>
                 </div>
                 <div className="flex gap-3 flex-wrap">
                   <Select value={filterStore} onValueChange={(value) => setFilterStore(value ?? "All")}>
@@ -446,7 +479,7 @@ export default function InventoryPage() {
                   </Select>
 
                   <div className="relative">
-                    <HugeiconsIcon icon={Search01Icon} strokeWidth={1.5} className="absolute left-2.5 top-1/2 -translate-y-1/2 size-3.5 text-[#a3a3a3] pointer-events-none" />
+                    <HugeiconsIcon icon={Search01Icon} strokeWidth={1.5} className="absolute left-2.5 top-1/2 -translate-y-1/2 size-3.5 text-muted-foreground pointer-events-none" />
                     <Input
                       placeholder="Search store or last 4"
                       value={searchQuery}
@@ -461,8 +494,8 @@ export default function InventoryPage() {
               <div className="overflow-x-auto">
                 <Table>
                   <TableHeader>
-                    <TableRow className="bg-[#fafafa] hover:bg-[#fafafa]">
-                      <TableHead className="text-xs font-medium text-[#737373] py-3 pl-6">
+                    <TableRow className="bg-muted/50 hover:bg-muted/50">
+                      <TableHead className="text-xs font-medium text-muted-foreground py-3 pl-6">
                         <Checkbox
                           checked={selectedRows.length === filteredCards.length && filteredCards.length > 0}
                           onCheckedChange={(checked) => {
@@ -474,27 +507,27 @@ export default function InventoryPage() {
                           }}
                         />
                       </TableHead>
-                      <TableHead className="text-xs font-medium text-[#737373] py-3">Store</TableHead>
-                      <TableHead className="text-xs font-medium text-[#737373] py-3">Card Number</TableHead>
-                      <TableHead className="text-xs font-medium text-[#737373] py-3">Initial Balance</TableHead>
-                      <TableHead className="text-xs font-medium text-[#737373] py-3">Remaining Balance</TableHead>
-                      <TableHead className="text-xs font-medium text-[#737373] py-3">Amount Spent</TableHead>
-                      <TableHead className="text-xs font-medium text-[#737373] py-3">Status</TableHead>
-                      <TableHead className="text-xs font-medium text-[#737373] py-3">Added By</TableHead>
-                      <TableHead className="text-xs font-medium text-[#737373] py-3 pr-6" />
+                      <TableHead className="text-xs font-medium text-muted-foreground py-3">Store</TableHead>
+                      <TableHead className="text-xs font-medium text-muted-foreground py-3">Card Number</TableHead>
+                      <TableHead className="text-xs font-medium text-muted-foreground py-3">Initial Balance</TableHead>
+                      <TableHead className="text-xs font-medium text-muted-foreground py-3">Remaining Balance</TableHead>
+                      <TableHead className="text-xs font-medium text-muted-foreground py-3">Amount Spent</TableHead>
+                      <TableHead className="text-xs font-medium text-muted-foreground py-3">Status</TableHead>
+                      <TableHead className="text-xs font-medium text-muted-foreground py-3">Added By</TableHead>
+                      <TableHead className="text-xs font-medium text-muted-foreground py-3 pr-6" />
                     </TableRow>
                   </TableHeader>
                   <TableBody>
                     {filteredCards.length === 0 ? (
                       <TableRow>
-                        <TableCell colSpan={9} className="h-24 text-center text-[#737373] text-sm">
+                        <TableCell colSpan={9} className="h-24 text-center text-muted-foreground text-sm">
                           No cards match your search.
                         </TableCell>
                       </TableRow>
                     ) : filteredCards.map(card => {
                       const isOpen = selectedId === card.id
-                      const pct = card.initialBalance > 0
-                        ? (card.remainingBalance / card.initialBalance) * 100
+                      const pct = card.initialAmount > 0
+                        ? (card.remainingAmount / card.initialAmount) * 100
                         : 0
 
                       return (
@@ -502,7 +535,7 @@ export default function InventoryPage() {
 
                           {/* Card row */}
                           <TableRow
-                            className={`border-[#e2e8f0] cursor-pointer transition-colors ${isOpen ? "bg-[#f8faff]" : "hover:bg-[#fafafa]"}`}
+                            className={`border-border cursor-pointer transition-colors ${isOpen ? "bg-accent/50" : "hover:bg-muted/50"}`}
                             onClick={() => selectCard(card.id)}
                           >
                             <TableCell className="py-3 pl-6 align-middle" onClick={(e) => e.stopPropagation()}>
@@ -517,44 +550,44 @@ export default function InventoryPage() {
                                 }}
                               />
                             </TableCell>
-                            <TableCell className="text-sm font-medium text-[#0a0a0a] py-3">{card.store}</TableCell>
-                            <TableCell className="text-sm text-[#525252] py-3 font-mono tracking-wide align-middle">•••• {card.last4}</TableCell>
-                            <TableCell className="text-sm text-[#525252] py-3 align-middle">${card.initialBalance.toFixed(2)}</TableCell>
+                            <TableCell className="text-sm font-medium text-foreground py-3">{card.store.name}</TableCell>
+                            <TableCell className="text-sm text-muted-foreground py-3 font-mono tracking-wide align-middle">•••• {card.lastFourDigits}</TableCell>
+                            <TableCell className="text-sm text-muted-foreground py-3 align-middle">${Number(card.initialAmount).toFixed(2)}</TableCell>
                             <TableCell className="py-3 align-middle">
                               <div className="flex flex-col gap-1">
-                                <span className={`text-sm font-medium ${card.remainingBalance === 0 ? "text-[#a3a3a3]" : "text-[#166534]"}`}>
-                                  ${card.remainingBalance.toFixed(2)}
+                                <span className={`text-sm font-medium ${card.remainingAmount === 0 ? "text-muted-foreground" : "text-green-600 dark:text-green-400"}`}>
+                                  ${Number(card.remainingAmount).toFixed(2)}
                                 </span>
-                                <div className="w-20 h-1 bg-[#e2e8f0] rounded-full overflow-hidden">
-                                  <div className="h-full bg-[#22c55e] rounded-full" style={{ width: `${pct}%` }} />
+                                <div className="w-20 h-1 bg-secondary rounded-full overflow-hidden">
+                                  <div className="h-full bg-green-500 rounded-full" style={{ width: `${pct}%` }} />
                                 </div>
                               </div>
                             </TableCell>
-                            <TableCell className="text-sm text-[#C2410C] py-3 align-middle">${(card.initialBalance - card.remainingBalance).toFixed(2)}</TableCell>
+                            <TableCell className="text-sm text-[#C2410C] py-3 align-middle">${(Number(card.initialAmount) - Number(card.remainingAmount)).toFixed(2)}</TableCell>
                             <TableCell className="py-3 align-middle">
                               <span className={`text-xs font-semibold px-2.5 py-1 rounded-full ${statusStyle(card.status)}`}>
-                                {card.status}
+                                {card.status === "ACTIVE" ? "Active" : card.status === "DONATED" ? "Donated" : "Used"}
                               </span>
                             </TableCell>
-                            <TableCell className="text-sm text-[#525252] py-3 align-middle">{card.addedBy}</TableCell>
+                            <TableCell className="text-sm text-muted-foreground py-3 align-middle">Admin</TableCell>
                             <TableCell className="py-3 pr-6 align-middle text-right">
                               <div className="flex items-center justify-end gap-2">
                                 <HugeiconsIcon
                                   icon={Edit01Icon}
                                   strokeWidth={2}
-                                  className="size-4 text-[#a3a3a3] hover:text-blue-500 cursor-pointer"
+                                  className="size-4 text-muted-foreground hover:text-blue-500 cursor-pointer"
                                   onClick={(e) => { e.stopPropagation(); openEditCard(card.id); }}
                                 />
                                 <HugeiconsIcon
                                   icon={Delete01Icon}
                                   strokeWidth={2}
-                                  className="size-4 text-[#a3a3a3] hover:text-red-500 cursor-pointer"
+                                  className="size-4 text-muted-foreground hover:text-red-500 cursor-pointer"
                                   onClick={(e) => { e.stopPropagation(); deleteCard(card.id); }}
                                 />
                                 <HugeiconsIcon
                                   icon={isOpen ? ArrowUp01Icon : ArrowDown01Icon}
                                   strokeWidth={2}
-                                  className="size-4 text-[#a3a3a3] inline-block"
+                                  className="size-4 text-muted-foreground inline-block"
                                 />
                               </div>
                             </TableCell>
@@ -562,23 +595,23 @@ export default function InventoryPage() {
 
                           {/* Expanded detail panel */}
                           {isOpen && selectedCard && (
-                            <TableRow className="bg-[#f8faff] hover:bg-[#f8faff] border-[#e2e8f0]">
+                            <TableRow className="bg-accent/30 hover:bg-accent/30 border-border">
                               <TableCell colSpan={9} className="p-0">
-                                <div className="px-6 py-5 border-t border-[#dbeafe]">
+                                <div className="px-6 py-5 border-t border-border">
 
                                   {/* Action buttons — only if balance remains */}
-                                  {selectedCard.remainingBalance > 0 && (
+                                  {selectedCard.remainingAmount > 0 && (
                                     <div className="flex gap-2 mb-4">
                                       <button
                                         onClick={() => { setShowSpend(v => !v); setShowDonate(false) }}
-                                        className={`flex items-center gap-1.5 text-sm font-medium px-3.5 py-2 rounded-[6px] border transition-colors ${showSpend ? "bg-[#0a0a0a] text-white border-[#0a0a0a]" : "bg-white text-[#0a0a0a] border-[#e2e8f0] hover:bg-[#fafafa]"}`}
+                                        className={`flex items-center gap-1.5 text-sm font-medium px-3.5 py-2 rounded-[6px] border transition-colors ${showSpend ? "bg-primary text-primary-foreground border-primary" : "bg-card text-foreground border-border hover:bg-muted"}`}
                                       >
                                         <HugeiconsIcon icon={ShoppingBasket01Icon} strokeWidth={2} className="size-4" />
                                         Record Spend
                                       </button>
                                       <button
                                         onClick={() => { setShowDonate(v => !v); setShowSpend(false) }}
-                                        className={`flex items-center gap-1.5 text-sm font-medium px-3.5 py-2 rounded-[6px] border transition-colors ${showDonate ? "bg-[#0a0a0a] text-white border-[#0a0a0a]" : "bg-white text-[#0a0a0a] border-[#e2e8f0] hover:bg-[#fafafa]"}`}
+                                        className={`flex items-center gap-1.5 text-sm font-medium px-3.5 py-2 rounded-[6px] border transition-colors ${showDonate ? "bg-primary text-primary-foreground border-primary" : "bg-card text-foreground border-border hover:bg-muted"}`}
                                       >
                                         <HugeiconsIcon icon={GiveBloodIcon} strokeWidth={2} className="size-4" />
                                         Record Donation
@@ -588,11 +621,11 @@ export default function InventoryPage() {
 
                                   {/* Spend form */}
                                   {showSpend && (
-                                    <div className="mb-5 bg-white border border-[#e2e8f0] rounded-[8px] p-4 space-y-3">
-                                      <p className="text-sm font-semibold text-[#0a0a0a]">Record a Spend</p>
+                                    <div className="mb-5 bg-card border border-border rounded-[8px] p-4 space-y-3">
+                                      <p className="text-sm font-semibold text-foreground">Record a Spend</p>
                                       <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
                                         <div className="space-y-1.5">
-                                          <Label className="text-xs font-medium text-[#737373]">Amount ($)</Label>
+                                          <Label className="text-xs font-medium text-muted-foreground">Amount ($)</Label>
                                           <Input
                                             type="number" min="0.01" step="0.01" placeholder="0.00"
                                             value={spendAmt} onChange={e => setSpendAmt(e.target.value)}
@@ -600,18 +633,18 @@ export default function InventoryPage() {
                                           />
                                         </div>
                                         <div className="space-y-1.5">
-                                          <Label className="text-xs font-medium text-[#737373]">Volunteer</Label>
+                                          <Label className="text-xs font-medium text-muted-foreground">Volunteer</Label>
                                           <Select value={spendVol} onValueChange={(value) => setSpendVol(value ?? "")}>
                                             <SelectTrigger size="sm" className="rounded-[6px]">
                                               <SelectValue placeholder="Select volunteer" />
                                             </SelectTrigger>
                                             <SelectContent>
-                                              {VOLUNTEERS.map(v => <SelectItem key={v} value={v}>{v}</SelectItem>)}
+                                              {volunteers.map(v => <SelectItem key={v.id} value={v.name}>{v.name}</SelectItem>)}
                                             </SelectContent>
                                           </Select>
                                         </div>
                                         <div className="space-y-1.5">
-                                          <Label className="text-xs font-medium text-[#737373]">Notes (optional)</Label>
+                                          <Label className="text-xs font-medium text-muted-foreground">Notes (optional)</Label>
                                           <Input
                                             placeholder="e.g. Groceries for Family A"
                                             value={spendNotes} onChange={e => setSpendNotes(e.target.value)}
@@ -619,17 +652,17 @@ export default function InventoryPage() {
                                           />
                                         </div>
                                       </div>
-                                      {spendErr && <p className="text-xs text-red-500">{spendErr}</p>}
+                                      {spendErr && <p className="text-xs text-destructive">{spendErr}</p>}
                                       <div className="flex gap-2">
                                         <button
                                           onClick={handleSpend}
-                                          className="text-sm font-medium bg-[#0a0a0a] text-white px-3.5 py-1.5 rounded-[6px] hover:bg-[#262626] transition-colors"
+                                          className="text-sm font-medium bg-primary text-primary-foreground px-3.5 py-1.5 rounded-[6px] hover:bg-primary-hover transition-colors"
                                         >
                                           Confirm Spend
                                         </button>
                                         <button
                                           onClick={() => { setShowSpend(false); setSpendErr("") }}
-                                          className="text-sm font-medium text-[#737373] px-3.5 py-1.5 rounded-[6px] hover:bg-white transition-colors"
+                                          className="text-sm font-medium text-muted-foreground px-3.5 py-1.5 rounded-[6px] hover:bg-muted transition-colors"
                                         >
                                           Cancel
                                         </button>
@@ -639,11 +672,11 @@ export default function InventoryPage() {
 
                                   {/* Donation form */}
                                   {showDonate && (
-                                    <div className="mb-5 bg-white border border-[#e2e8f0] rounded-[8px] p-4 space-y-3">
-                                      <p className="text-sm font-semibold text-[#0a0a0a]">Record a Donation Out</p>
+                                    <div className="mb-5 bg-card border border-border rounded-[8px] p-4 space-y-3">
+                                      <p className="text-sm font-semibold text-foreground">Record a Donation Out</p>
                                       <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
                                         <div className="space-y-1.5">
-                                          <Label className="text-xs font-medium text-[#737373]">Recipient</Label>
+                                          <Label className="text-xs font-medium text-muted-foreground">Recipient</Label>
                                           <Input
                                             placeholder="e.g. Family A"
                                             value={donateRecip} onChange={e => setDonateRecip(e.target.value)}
@@ -651,32 +684,32 @@ export default function InventoryPage() {
                                           />
                                         </div>
                                         <div className="space-y-1.5">
-                                          <Label className="text-xs font-medium text-[#737373]">Volunteer</Label>
+                                          <Label className="text-xs font-medium text-muted-foreground">Volunteer</Label>
                                           <Select value={donateVol} onValueChange={(value) => setDonateVol(value ?? "")}>
                                             <SelectTrigger size="sm" className="rounded-[6px]">
                                               <SelectValue placeholder="Select volunteer" />
                                             </SelectTrigger>
                                             <SelectContent>
-                                              {VOLUNTEERS.map(v => <SelectItem key={v} value={v}>{v}</SelectItem>)}
+                                              {volunteers.map(v => <SelectItem key={v.id} value={v.name}>{v.name}</SelectItem>)}
                                             </SelectContent>
                                           </Select>
                                         </div>
                                         <div className="space-y-1.5">
-                                          <Label className="text-xs font-medium text-[#737373]">Amount</Label>
+                                          <Label className="text-xs font-medium text-muted-foreground">Amount</Label>
                                           <div className="flex gap-3 items-center pt-0.5">
-                                            <label className="flex items-center gap-1.5 text-xs text-[#525252] cursor-pointer">
+                                            <label className="flex items-center gap-1.5 text-xs text-foreground cursor-pointer">
                                               <input
                                                 type="radio" checked={donateFull}
                                                 onChange={() => { setDonateFull(true); setDonateAmt("") }}
-                                                className="accent-[#0a0a0a]"
+                                                className="accent-primary"
                                               />
-                                              Full (${selectedCard.remainingBalance.toFixed(2)})
+                                              Full (${Number(selectedCard.remainingAmount).toFixed(2)})
                                             </label>
-                                            <label className="flex items-center gap-1.5 text-xs text-[#525252] cursor-pointer">
+                                            <label className="flex items-center gap-1.5 text-xs text-foreground cursor-pointer">
                                               <input
                                                 type="radio" checked={!donateFull}
                                                 onChange={() => setDonateFull(false)}
-                                                className="accent-[#0a0a0a]"
+                                                className="accent-primary"
                                               />
                                               Partial
                                             </label>
@@ -691,24 +724,24 @@ export default function InventoryPage() {
                                         </div>
                                       </div>
                                       <div className="space-y-1.5">
-                                        <Label className="text-xs font-medium text-[#737373]">Notes (optional)</Label>
+                                        <Label className="text-xs font-medium text-muted-foreground">Notes (optional)</Label>
                                         <Input
                                           placeholder="e.g. Weekly groceries for the family"
                                           value={donateNotes} onChange={e => setDonateNotes(e.target.value)}
                                           className="h-8 text-sm rounded-[6px]"
                                         />
                                       </div>
-                                      {donateErr && <p className="text-xs text-red-500">{donateErr}</p>}
+                                      {donateErr && <p className="text-xs text-destructive">{donateErr}</p>}
                                       <div className="flex gap-2">
                                         <button
                                           onClick={handleDonate}
-                                          className="text-sm font-medium bg-[#0a0a0a] text-white px-3.5 py-1.5 rounded-[6px] hover:bg-[#262626] transition-colors"
+                                          className="text-sm font-medium bg-primary text-primary-foreground px-3.5 py-1.5 rounded-[6px] hover:bg-primary-hover transition-colors"
                                         >
                                           Confirm Donation
                                         </button>
                                         <button
                                           onClick={() => { setShowDonate(false); setDonateErr("") }}
-                                          className="text-sm font-medium text-[#737373] px-3.5 py-1.5 rounded-[6px] hover:bg-white transition-colors"
+                                          className="text-sm font-medium text-muted-foreground px-3.5 py-1.5 rounded-[6px] hover:bg-muted transition-colors"
                                         >
                                           Cancel
                                         </button>
@@ -718,39 +751,39 @@ export default function InventoryPage() {
 
                                   {/* Transaction history */}
                                   <div>
-                                    <p className="text-xs font-semibold text-[#737373] uppercase tracking-wide mb-3">
+                                    <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-3">
                                       Transaction History
                                     </p>
                                     {cardTxns.length === 0 ? (
-                                      <p className="text-sm text-[#a3a3a3] text-center py-4">
+                                      <p className="text-sm text-muted-foreground text-center py-4">
                                         No transactions recorded for this card.
                                       </p>
                                     ) : (
-                                      <div className="bg-white border border-[#e2e8f0] rounded-[8px] overflow-hidden">
+                                      <div className="bg-card border border-border rounded-[8px] overflow-hidden">
                                         <table className="w-full text-sm">
                                           <thead>
-                                            <tr className="bg-[#fafafa] border-b border-[#e2e8f0]">
-                                              <th className="text-xs font-medium text-[#737373] text-left py-2.5 pl-4 pr-3">Date & Time</th>
-                                              <th className="text-xs font-medium text-[#737373] text-left py-2.5 pr-3">Type</th>
-                                              <th className="text-xs font-medium text-[#737373] text-left py-2.5 pr-3">Amount</th>
-                                              <th className="text-xs font-medium text-[#737373] text-left py-2.5 pr-3">Volunteer</th>
-                                              <th className="text-xs font-medium text-[#737373] text-left py-2.5 pr-3">Recipient</th>
-                                              <th className="text-xs font-medium text-[#737373] text-left py-2.5 pr-4">Notes</th>
+                                            <tr className="bg-muted/50 border-b border-border">
+                                              <th className="text-xs font-medium text-muted-foreground text-left py-2.5 pl-4 pr-3">Date & Time</th>
+                                              <th className="text-xs font-medium text-muted-foreground text-left py-2.5 pr-3">Type</th>
+                                              <th className="text-xs font-medium text-muted-foreground text-left py-2.5 pr-3">Amount</th>
+                                              <th className="text-xs font-medium text-muted-foreground text-left py-2.5 pr-3">Volunteer</th>
+                                              <th className="text-xs font-medium text-muted-foreground text-left py-2.5 pr-3">Recipient</th>
+                                              <th className="text-xs font-medium text-muted-foreground text-left py-2.5 pr-4">Notes</th>
                                             </tr>
                                           </thead>
                                           <tbody>
                                             {cardTxns.map((t, i) => (
-                                              <tr key={t.id} className={i < cardTxns.length - 1 ? "border-b border-[#e2e8f0]" : ""}>
-                                                <td className="py-2.5 pl-4 pr-3 text-[#525252] whitespace-nowrap">{fmt(t.date)}</td>
+                                              <tr key={t.id} className={i < cardTxns.length - 1 ? "border-b border-border" : ""}>
+                                                <td className="py-2.5 pl-4 pr-3 text-muted-foreground whitespace-nowrap">{fmt(t.createdAt)}</td>
                                                 <td className="py-2.5 pr-3">
-                                                  <span className={`text-xs font-semibold px-2 py-0.5 rounded-full ${t.type === "spend" ? "bg-[#fed7aa] text-[#9a3412]" : "bg-[#bbf7d0] text-[#166534]"}`}>
-                                                    {t.type === "spend" ? "Spend" : "Donation"}
+                                                  <span className={`text-xs font-semibold px-2 py-0.5 rounded-full ${t.type === "SPEND" ? "bg-orange-100 text-orange-800" : "bg-green-100 text-green-800"}`}>
+                                                    {t.type === "SPEND" ? "Spend" : "Donation"}
                                                   </span>
                                                 </td>
-                                                <td className="py-2.5 pr-3 font-medium text-[#0a0a0a]">-${t.amount.toFixed(2)}</td>
-                                                <td className="py-2.5 pr-3 text-[#525252]">{t.volunteer}</td>
-                                                <td className="py-2.5 pr-3 text-[#525252]">{t.recipient ?? "—"}</td>
-                                                <td className="py-2.5 pr-4 text-[#a3a3a3]">{t.notes || "—"}</td>
+                                                <td className="py-2.5 pr-3 font-medium text-foreground">-${Number(t.amount).toFixed(2)}</td>
+                                                <td className="py-2.5 pr-3 text-muted-foreground">{t.volunteerName}</td>
+                                                <td className="py-2.5 pr-3 text-muted-foreground">{t.recipientName ?? "—"}</td>
+                                                <td className="py-2.5 pr-4 text-muted-foreground">{t.notes || "—"}</td>
                                               </tr>
                                             ))}
                                           </tbody>
@@ -772,9 +805,9 @@ export default function InventoryPage() {
               </div>{/* end overflow-x-auto */}
 
               {/* Footer */}
-              <div className="px-6 py-3 border-t border-[#e2e8f0]">
-                <p className="text-xs text-[#737373]">
-                  Showing {filteredCards.length} of {data.cards.length} cards
+              <div className="px-6 py-3 border-t border-border">
+                <p className="text-xs text-muted-foreground">
+                  Showing {filteredCards.length} of {cards.length} cards
                 </p>
               </div>
 
@@ -785,23 +818,23 @@ export default function InventoryPage() {
 
       {/* Edit Modal */}
       {showEditSheet && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50">
-          <div className="bg-white rounded-[12px] shadow-lg max-w-md w-full mx-4 max-h-[90vh] overflow-y-auto">
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-background/80">
+          <div className="bg-card rounded-[12px] border shadow-lg max-w-md w-full mx-4 max-h-[90vh] overflow-y-auto">
             <div className="p-6">
               <div className="flex items-center justify-between mb-4">
-                <h2 className="text-lg font-semibold text-[#0a0a0a]">Edit Gift Card</h2>
+                <h2 className="text-lg font-semibold text-foreground">Edit Gift Card</h2>
                 <button
                   onClick={() => setShowEditSheet(false)}
-                  className="text-[#a3a3a3] hover:text-[#737373] transition-colors"
+                  className="text-muted-foreground hover:text-foreground transition-colors"
                 >
                   <HugeiconsIcon icon={ArrowUp01Icon} strokeWidth={2} className="size-5 rotate-45" />
                 </button>
               </div>
               <div className="space-y-4">
                 <div className="space-y-1.5">
-                  <Label className="text-xs font-medium text-[#737373]">Store</Label>
+                  <Label className="text-xs font-medium text-muted-foreground">Store</Label>
                   <Select value={editStore} onValueChange={(val) => setEditStore(val ?? "")}>
-                    <SelectTrigger className="rounded-[26px] bg-[rgba(229,229,229,0.3)] border-[#e5e5e5] h-9 text-sm text-[#737373]">
+                    <SelectTrigger className="rounded-[26px] bg-background border-border h-9 text-sm text-foreground">
                       <SelectValue placeholder="Select store" />
                     </SelectTrigger>
                     <SelectContent>
@@ -813,28 +846,28 @@ export default function InventoryPage() {
                 </div>
                 <div className="grid grid-cols-2 gap-3">
                   <div className="space-y-1.5">
-                    <Label className="text-xs font-medium text-[#737373]">Initial Balance</Label>
+                    <Label className="text-xs font-medium text-muted-foreground">Initial Balance</Label>
                     <div className="relative">
-                      <span className="pointer-events-none absolute inset-y-0 left-3 flex items-center text-[#737373] text-sm">$</span>
+                      <span className="pointer-events-none absolute inset-y-0 left-3 flex items-center text-muted-foreground text-sm">$</span>
                       <Input
                         value={editInitialBalance}
                         onChange={(e) => setEditInitialBalance(e.target.value.replace(/[^0-9.]/g, ""))}
                         placeholder="0.00"
                         inputMode="decimal"
-                        className="rounded-[26px] bg-[rgba(229,229,229,0.3)] border-[#e5e5e5] h-9 text-sm text-[#737373] placeholder:text-[#737373] pl-7"
+                        className="rounded-[26px] bg-background border-border h-9 text-sm text-foreground placeholder:text-muted-foreground pl-7"
                       />
                     </div>
                   </div>
                   <div className="space-y-1.5">
-                    <Label className="text-xs font-medium text-[#737373]">Remaining Balance</Label>
+                    <Label className="text-xs font-medium text-muted-foreground">Remaining Balance</Label>
                     <div className="relative">
-                      <span className="pointer-events-none absolute inset-y-0 left-3 flex items-center text-[#737373] text-sm">$</span>
+                      <span className="pointer-events-none absolute inset-y-0 left-3 flex items-center text-muted-foreground text-sm">$</span>
                       <Input
                         value={editRemainingBalance}
                         onChange={(e) => setEditRemainingBalance(e.target.value.replace(/[^0-9.]/g, ""))}
                         placeholder="0.00"
                         inputMode="decimal"
-                        className="rounded-[26px] bg-[rgba(229,229,229,0.3)] border-[#e5e5e5] h-9 text-sm text-[#737373] placeholder:text-[#737373] pl-7"
+                        className="rounded-[26px] bg-background border-border h-9 text-sm text-foreground placeholder:text-muted-foreground pl-7"
                       />
                     </div>
                   </div>
@@ -842,7 +875,7 @@ export default function InventoryPage() {
               </div>
               <div className="flex justify-end gap-3 mt-6">
                 <Button variant="outline" onClick={() => setShowEditSheet(false)} className="rounded-[6px]">Cancel</Button>
-                <Button onClick={saveEditCard} className="bg-[#0f172a] text-white text-sm font-medium px-4 py-2 rounded-[6px] hover:bg-[#1e293b] transition-colors">Save Changes</Button>
+                <Button onClick={saveEditCard} className="bg-primary text-primary-foreground text-sm font-medium px-4 py-2 rounded-[6px] hover:bg-primary-hover transition-colors">Save Changes</Button>
               </div>
             </div>
           </div>

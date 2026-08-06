@@ -14,6 +14,9 @@ import { Input } from "@/components/ui/input";
 import { createClient } from "@/lib/supabase/client";
 import { useState } from "react";
 import { useRouter } from "next/navigation";
+import { MFAChallenge } from "./mfa-challenge";
+import { HugeiconsIcon } from "@hugeicons/react";
+import { FingerPrintIcon } from "@hugeicons/core-free-icons";
 
 export function LoginForm({
   className,
@@ -23,14 +26,16 @@ export function LoginForm({
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
+  const [showMFA, setShowMFA] = useState(false);
+  const [passkeyLoading, setPasskeyLoading] = useState(false);
   const router = useRouter();
+  const supabase = createClient() as any;
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
     setError("");
     setLoading(true);
 
-    const supabase = createClient();
     const { error } = await supabase.auth.signInWithPassword({ email, password });
 
     if (error) {
@@ -39,8 +44,49 @@ export function LoginForm({
       return;
     }
 
+    // Check if user needs MFA verification
+    const { data: aalData } = await supabase.auth.mfa.getAuthenticatorAssuranceLevel();
+
+    if (aalData?.currentLevel === "aal1" && aalData?.nextLevel === "aal2") {
+      // User has MFA enrolled but hasn't verified yet — show challenge
+      setShowMFA(true);
+      setLoading(false);
+      return;
+    }
+
     router.push("/dashboard");
     router.refresh();
+  }
+
+  async function handlePasskeySignIn() {
+    setPasskeyLoading(true);
+    setError("");
+
+    try {
+      const { data, error } = await supabase.auth.signInWithPasskey();
+      if (error) {
+        setError(error.message);
+      } else {
+        router.push("/dashboard");
+        router.refresh();
+      }
+    } catch (e: any) {
+      setError(e.message || "Passkey sign-in cancelled.");
+    }
+    setPasskeyLoading(false);
+  }
+
+  function handleMFASuccess() {
+    router.push("/dashboard");
+    router.refresh();
+  }
+
+  if (showMFA) {
+    return (
+      <div className={cn("flex flex-col gap-6", className)} {...props}>
+        <MFAChallenge onSuccess={handleMFASuccess} />
+      </div>
+    );
   }
 
   return (
@@ -84,6 +130,27 @@ export function LoginForm({
                   {loading ? "Logging in…" : "Login"}
                 </Button>
               </Field>
+
+              <div className="relative">
+                <div className="absolute inset-0 flex items-center">
+                  <span className="w-full border-t" />
+                </div>
+                <div className="relative flex justify-center text-xs uppercase">
+                  <span className="bg-card px-2 text-muted-foreground">Or</span>
+                </div>
+              </div>
+
+              <Button
+                type="button"
+                variant="outline"
+                className="w-full"
+                onClick={handlePasskeySignIn}
+                disabled={passkeyLoading}
+              >
+                <HugeiconsIcon icon={FingerPrintIcon} strokeWidth={2} className="size-4 mr-2" />
+                {passkeyLoading ? "Waiting for device…" : "Sign in with Passkey"}
+              </Button>
+
               <p className="text-center text-sm text-muted-foreground">
                 Don&apos;t have an account?{" "}
                 <a href="/signup" className="underline underline-offset-4 hover:text-primary">
