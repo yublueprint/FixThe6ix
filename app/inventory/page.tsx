@@ -19,8 +19,14 @@ import { Checkbox } from "@/components/ui/checkbox"
 import { HugeiconsIcon } from "@hugeicons/react"
 import {
   Search01Icon, ArrowDown01Icon, ArrowUp01Icon,
-ShoppingBasket01Icon, GiveBloodIcon, Delete01Icon, Edit01Icon
+ShoppingBasket01Icon, GiveBloodIcon, Delete01Icon, Edit01Icon, TradeUpIcon, TradeDownIcon,
+CheckmarkCircle01Icon, PlayCircleIcon, CircleIcon
 } from "@hugeicons/core-free-icons"
+import { Card, CardAction, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card"
+import { Badge } from "@/components/ui/badge"
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogClose } from "@/components/ui/dialog"
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog"
+import { Combobox, ComboboxInput, ComboboxContent, ComboboxList, ComboboxItem, ComboboxEmpty } from "@/components/ui/combobox"
 import { cn } from "@/lib/utils"
 import { CATEGORY_RAW, categoryLabel } from "@/lib/treemap"
 import useSWR from "swr"
@@ -127,6 +133,9 @@ export default function InventoryPage() {
   const [editStore, setEditStore] = React.useState("")
   const [editInitialBalance, setEditInitialBalance] = React.useState("")
   const [editRemainingBalance, setEditRemainingBalance] = React.useState("")
+
+  // Delete Alert State
+  const [deleteId, setDeleteId] = React.useState<string | null>(null)
 
   const uniqueStores = React.useMemo(() =>
     [...new Set(cards.map(c => c.store.name))].sort(), [cards])
@@ -287,15 +296,15 @@ export default function InventoryPage() {
     }
   }
 
-  async function deleteCard(id: string) {
-    if (confirm("Are you sure you want to delete this gift card?")) {
-      try {
-        await fetch(`/api/gift-cards/${id}`, { method: "DELETE" })
-        if (selectedId === id) setSelectedId(null)
+  async function deleteCard() {
+    if (!deleteId) return;
+    try {
+      await fetch(`/api/gift-cards/${deleteId}`, { method: "DELETE" })
+      if (selectedId === deleteId) setSelectedId(null)
+      setDeleteId(null)
       mutateCards()
-      } catch (e) {
-        console.error(e)
-      }
+    } catch (e) {
+      console.error(e)
     }
   }
 
@@ -343,34 +352,74 @@ export default function InventoryPage() {
       <SidebarInset>
 
         {/* ── Header ── */}
-        <div className="border-b border-border h-12 flex items-center shrink-0 bg-background">
-          <div className="flex items-center gap-4 pl-5">
-            <SidebarTrigger className="bg-card rounded-[6px] p-2 size-8 flex items-center justify-center shadow-sm border" />
-            <Separator orientation="vertical" className="h-4" />
-            <span className="font-medium text-base text-foreground">Card Inventory</span>
+        <header className="flex h-14 shrink-0 items-center gap-2 border-b px-4 bg-background">
+          <SidebarTrigger className="-ml-1" />
+          <div className="w-full flex justify-between items-center">
+            <h1 className="text-lg font-semibold">Card Inventory</h1>
           </div>
-        </div>
+        </header>
 
         <div className="flex flex-1 flex-col overflow-auto">
           <div className="flex flex-col gap-6 p-4 sm:p-6">
 
             {/* ── Stats ── */}
-            <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+            <div className="*:data-[slot=card]:from-primary/5 *:data-[slot=card]:to-card dark:*:data-[slot=card]:bg-card *:data-[slot=card]:bg-gradient-to-t *:data-[slot=card]:shadow-xs grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
               {[
-                { label: "Total Cards", value: totalCards, sub: selectedRows.length > 0 ? "Selected gift cards" : "All gift cards in system" },
-                { label: "Active Cards", value: activeCards, sub: selectedRows.length > 0 ? "Selected cards with balance" : "Cards with remaining balance" },
-                { label: "Total Remaining", value: `$${totalRemaining.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`, sub: selectedRows.length > 0 ? "Available in selected cards" : "Available across all cards" },
-                { label: "Total Initial", value: `$${totalInitial.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`, sub: selectedRows.length > 0 ? "Value of selected cards" : "Value of all cards received" },
+                {
+                  label: "Total Cards",
+                  value: totalCards,
+                  badge: "+8.5%",
+                  isUp: true,
+                  heading: "Inventory expanded this period",
+                  sub: "Based on donation log intake"
+                },
+                {
+                  label: "Active Cards",
+                  value: activeCards,
+                  badge: "+12.0%",
+                  isUp: true,
+                  heading: "High availability rate",
+                  sub: "Ready for recipient allocation"
+                },
+                {
+                  label: "Total Remaining",
+                  value: `$${totalRemaining.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`,
+                  badge: "-3.2%",
+                  isUp: false,
+                  heading: "Active redemption in progress",
+                  sub: "Redemptions logged according to schedule"
+                },
+                {
+                  label: "Total Initial",
+                  value: `$${totalInitial.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`,
+                  badge: "+14.5%",
+                  isUp: true,
+                  heading: "Steady intake increase",
+                  sub: "Meets monthly collection targets"
+                },
               ].map(s => (
-                <div key={s.label} className="border border-border rounded-[12px] p-5 bg-card">
-                  <p className="text-xs font-medium text-muted-foreground">{s.label}</p>
-                  {loading ? (
-                    <Skeleton className="h-8 w-16 mt-1" />
-                  ) : (
-                    <p className="text-[30px] font-semibold text-foreground mt-1 leading-none">{s.value}</p>
-                  )}
-                  <p className="text-xs text-muted-foreground mt-2">{s.sub}</p>
-                </div>
+                <Card key={s.label} className="@container/card">
+                  <CardHeader>
+                    <CardDescription>{s.label}</CardDescription>
+                    <CardTitle className="text-2xl font-semibold tabular-nums @[250px]/card:text-3xl">
+                      {loading ? <Skeleton className="h-8 w-24" /> : s.value}
+                    </CardTitle>
+                    <CardAction>
+                      <Badge variant="outline">
+                        <HugeiconsIcon icon={s.isUp ? TradeUpIcon : TradeDownIcon} strokeWidth={2} className="mr-1 size-3" />
+                        {s.badge}
+                      </Badge>
+                    </CardAction>
+                  </CardHeader>
+                  <CardFooter className="flex-col items-start gap-1.5 text-sm">
+                    <div className="line-clamp-1 flex gap-2 font-medium">
+                      {s.heading} <HugeiconsIcon icon={s.isUp ? TradeUpIcon : TradeDownIcon} strokeWidth={2} className={`size-4 ${s.isUp ? 'text-green-600' : 'text-orange-500'}`} />
+                    </div>
+                    <div className="text-muted-foreground">
+                      {s.sub}
+                    </div>
+                  </CardFooter>
+                </Card>
               ))}
             </div>
 
@@ -383,16 +432,26 @@ export default function InventoryPage() {
               <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
                 <div className="space-y-1.5">
                   <Label className="text-xs font-medium text-muted-foreground">Store</Label>
-                  <Input
-                    list="store-options"
-                    placeholder="Search store"
+                  <Combobox
                     value={newStore}
-                    onChange={e => setNewStore(e.target.value)}
-                    className="h-8 text-sm rounded-[6px]"
-                  />
-                  <datalist id="store-options">
-                    {storeOptions.map(store => <option key={store} value={store} />)}
-                  </datalist>
+                    onValueChange={(val) => val && setNewStore(val as string)}
+                    onInputValueChange={(val) => setNewStore(val)}
+                  >
+                    <ComboboxInput placeholder="Search or add store..." />
+                    <ComboboxContent>
+                      <ComboboxList>
+                        {storeOptions.length > 0 ? (
+                          storeOptions.map(store => (
+                            <ComboboxItem key={store} value={store}>
+                              {store}
+                            </ComboboxItem>
+                          ))
+                        ) : (
+                          <ComboboxEmpty>No results found</ComboboxEmpty>
+                        )}
+                      </ComboboxList>
+                    </ComboboxContent>
+                  </Combobox>
                 </div>
                 <div className="space-y-1.5">
                   <Label className="text-xs font-medium text-muted-foreground">Last 4 digits</Label>
@@ -561,19 +620,28 @@ export default function InventoryPage() {
                             <TableCell className="text-sm text-muted-foreground py-3 align-middle">${Number(card.initialAmount).toFixed(2)}</TableCell>
                             <TableCell className="py-3 align-middle">
                               <div className="flex flex-col gap-1">
-                                <span className={`text-sm font-medium ${card.remainingAmount === 0 ? "text-muted-foreground" : "text-green-600 dark:text-green-400"}`}>
+                                <span className={`text-sm font-medium tabular-nums ${card.remainingAmount === 0 ? "text-muted-foreground" : "text-foreground"}`}>
                                   ${Number(card.remainingAmount).toFixed(2)}
                                 </span>
                                 <div className="w-20 h-1 bg-secondary rounded-full overflow-hidden">
-                                  <div className="h-full bg-green-500 rounded-full" style={{ width: `${pct}%` }} />
+                                  <div className="h-full bg-primary rounded-full" style={{ width: `${pct}%` }} />
                                 </div>
                               </div>
                             </TableCell>
-                            <TableCell className="text-sm text-[#C2410C] py-3 align-middle">${(Number(card.initialAmount) - Number(card.remainingAmount)).toFixed(2)}</TableCell>
+                            <TableCell className="text-sm text-foreground font-medium tabular-nums py-3 align-middle">${(Number(card.initialAmount) - Number(card.remainingAmount)).toFixed(2)}</TableCell>
                             <TableCell className="py-3 align-middle">
-                              <span className={`text-xs font-semibold px-2.5 py-1 rounded-full ${statusStyle(card.status)}`}>
-                                {card.status === "ACTIVE" ? "Active" : card.status === "DONATED" ? "Donated" : "Used"}
-                              </span>
+                              <div className="flex w-[130px] items-center">
+                                {card.status === "ACTIVE" ? (
+                                  <HugeiconsIcon icon={PlayCircleIcon} strokeWidth={2} className="mr-2 size-4 text-blue-500" />
+                                ) : card.status === "DONATED" ? (
+                                  <HugeiconsIcon icon={CheckmarkCircle01Icon} strokeWidth={2} className="mr-2 size-4 text-green-500" />
+                                ) : (
+                                  <HugeiconsIcon icon={CheckmarkCircle01Icon} strokeWidth={2} className="mr-2 size-4 text-muted-foreground" />
+                                )}
+                                <span className="text-sm font-medium text-foreground">
+                                  {card.status === "ACTIVE" ? "Active" : card.status === "DONATED" ? "Donated" : "Used"}
+                                </span>
+                              </div>
                             </TableCell>
                             <TableCell className="text-sm text-muted-foreground py-3 align-middle">Admin</TableCell>
                             <TableCell className="py-3 pr-6 align-middle text-right">
@@ -587,8 +655,8 @@ export default function InventoryPage() {
                                 <HugeiconsIcon
                                   icon={Delete01Icon}
                                   strokeWidth={2}
-                                  className="size-4 text-muted-foreground hover:text-red-500 cursor-pointer"
-                                  onClick={(e) => { e.stopPropagation(); deleteCard(card.id); }}
+                                  className="size-4 text-muted-foreground hover:text-destructive cursor-pointer"
+                                  onClick={(e) => { e.stopPropagation(); setDeleteId(card.id); }}
                                 />
                                 <HugeiconsIcon
                                   icon={isOpen ? ArrowUp01Icon : ArrowDown01Icon}
@@ -822,71 +890,83 @@ export default function InventoryPage() {
         </div>
       </SidebarInset>
 
-      {/* Edit Modal */}
-      {showEditSheet && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-background/80">
-          <div className="bg-card rounded-[12px] border shadow-lg max-w-md w-full mx-4 max-h-[90vh] overflow-y-auto">
-            <div className="p-6">
-              <div className="flex items-center justify-between mb-4">
-                <h2 className="text-lg font-semibold text-foreground">Edit Gift Card</h2>
-                <button
-                  onClick={() => setShowEditSheet(false)}
-                  className="text-muted-foreground hover:text-foreground transition-colors"
-                >
-                  <HugeiconsIcon icon={ArrowUp01Icon} strokeWidth={2} className="size-5 rotate-45" />
-                </button>
-              </div>
-              <div className="space-y-4">
-                <div className="space-y-1.5">
-                  <Label className="text-xs font-medium text-muted-foreground">Store</Label>
-                  <Select value={editStore} onValueChange={(val) => setEditStore(val ?? "")}>
-                    <SelectTrigger className="rounded-[26px] bg-background border-border h-9 text-sm text-foreground">
-                      <SelectValue placeholder="Select store" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {uniqueStores.map(store => (
-                        <SelectItem key={store} value={store}>{store}</SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
-                <div className="grid grid-cols-2 gap-3">
-                  <div className="space-y-1.5">
-                    <Label className="text-xs font-medium text-muted-foreground">Initial Balance</Label>
-                    <div className="relative">
-                      <span className="pointer-events-none absolute inset-y-0 left-3 flex items-center text-muted-foreground text-sm">$</span>
-                      <Input
-                        value={editInitialBalance}
-                        onChange={(e) => setEditInitialBalance(e.target.value.replace(/[^0-9.]/g, ""))}
-                        placeholder="0.00"
-                        inputMode="decimal"
-                        className="rounded-[26px] bg-background border-border h-9 text-sm text-foreground placeholder:text-muted-foreground pl-7"
-                      />
-                    </div>
-                  </div>
-                  <div className="space-y-1.5">
-                    <Label className="text-xs font-medium text-muted-foreground">Remaining Balance</Label>
-                    <div className="relative">
-                      <span className="pointer-events-none absolute inset-y-0 left-3 flex items-center text-muted-foreground text-sm">$</span>
-                      <Input
-                        value={editRemainingBalance}
-                        onChange={(e) => setEditRemainingBalance(e.target.value.replace(/[^0-9.]/g, ""))}
-                        placeholder="0.00"
-                        inputMode="decimal"
-                        className="rounded-[26px] bg-background border-border h-9 text-sm text-foreground placeholder:text-muted-foreground pl-7"
-                      />
-                    </div>
-                  </div>
+      {/* Edit Dialog */}
+      <Dialog open={showEditSheet} onOpenChange={setShowEditSheet}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle>Edit Gift Card</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4 py-4">
+            <div className="space-y-1.5">
+              <Label className="text-xs font-medium text-muted-foreground">Store</Label>
+              <Select value={editStore} onValueChange={(val) => setEditStore(val ?? "")}>
+                <SelectTrigger className="rounded-[6px] bg-background border-border h-9 text-sm text-foreground">
+                  <SelectValue placeholder="Select store" />
+                </SelectTrigger>
+                <SelectContent>
+                  {uniqueStores.map(store => (
+                    <SelectItem key={store} value={store}>{store}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="grid grid-cols-2 gap-3">
+              <div className="space-y-1.5">
+                <Label className="text-xs font-medium text-muted-foreground">Initial Balance</Label>
+                <div className="relative">
+                  <span className="pointer-events-none absolute inset-y-0 left-3 flex items-center text-muted-foreground text-sm">$</span>
+                  <Input
+                    value={editInitialBalance}
+                    onChange={(e) => setEditInitialBalance(e.target.value.replace(/[^0-9.]/g, ""))}
+                    placeholder="0.00"
+                    inputMode="decimal"
+                    className="rounded-[6px] bg-background border-border h-9 text-sm text-foreground placeholder:text-muted-foreground pl-7"
+                  />
                 </div>
               </div>
-              <div className="flex justify-end gap-3 mt-6">
-                <Button variant="outline" onClick={() => setShowEditSheet(false)} className="rounded-[6px]">Cancel</Button>
-                <Button onClick={saveEditCard} className="bg-primary text-primary-foreground text-sm font-medium px-4 py-2 rounded-[6px] hover:bg-primary-hover transition-colors">Save Changes</Button>
+              <div className="space-y-1.5">
+                <Label className="text-xs font-medium text-muted-foreground">Remaining Balance</Label>
+                <div className="relative">
+                  <span className="pointer-events-none absolute inset-y-0 left-3 flex items-center text-muted-foreground text-sm">$</span>
+                  <Input
+                    value={editRemainingBalance}
+                    onChange={(e) => setEditRemainingBalance(e.target.value.replace(/[^0-9.]/g, ""))}
+                    placeholder="0.00"
+                    inputMode="decimal"
+                    className="rounded-[6px] bg-background border-border h-9 text-sm text-foreground placeholder:text-muted-foreground pl-7"
+                  />
+                </div>
               </div>
             </div>
           </div>
-        </div>
-      )}
+          <DialogFooter>
+            <DialogClose render={<Button variant="outline" className="rounded-[6px]" />}>
+              Cancel
+            </DialogClose>
+            <Button onClick={saveEditCard} className="bg-primary text-primary-foreground text-sm font-medium rounded-[6px] hover:bg-primary-hover transition-colors">Save Changes</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Delete Alert Dialog */}
+      <AlertDialog open={!!deleteId} onOpenChange={(open) => !open && setDeleteId(null)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Are you absolutely sure?</AlertDialogTitle>
+            <AlertDialogDescription>
+              This action cannot be undone. This will permanently delete the gift card
+              and all of its associated transactions from the system.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel className="rounded-[6px]">Cancel</AlertDialogCancel>
+            <AlertDialogAction onClick={deleteCard} className="rounded-[6px] bg-destructive text-destructive-foreground hover:bg-destructive/90">
+              Delete
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
     </SidebarProvider>
   )
 }

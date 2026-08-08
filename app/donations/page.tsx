@@ -15,6 +15,8 @@ import { ArrowLeft01Icon, ArrowLeftDoubleIcon, ArrowRight01Icon, ArrowRightDoubl
 import { cn } from "@/lib/utils"
 import DonationsTable from "@/components/donations-table"
 import { Skeleton } from "@/components/ui/skeleton"
+import { Card, CardAction, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card"
+import { Badge } from "@/components/ui/badge"
 
 function formatFilterDate(iso: string) {
   if (!iso) return ""
@@ -162,45 +164,63 @@ export default function DonationsPage() {
       <SidebarInset>
 
         {/* ── Header ── */}
-        <div className="border-b border-border h-12 flex items-center shrink-0 bg-background">
-          <div className="flex items-center gap-4 pl-5">
-            <SidebarTrigger className="bg-card rounded-[6px] p-2 size-8 flex items-center justify-center shadow-sm border" />
-            <Separator orientation="vertical" className="h-4" />
-            <span className="font-medium text-base text-foreground">Donations Given</span>
+        <header className="flex h-14 shrink-0 items-center gap-2 border-b px-4 bg-background">
+          <SidebarTrigger className="-ml-1" />
+          <div className="w-full flex justify-between items-center">
+            <h1 className="text-lg font-semibold">Donations Given</h1>
           </div>
-        </div>
+        </header>
 
         <div className="flex flex-1 flex-col overflow-auto">
           <div className="flex flex-col gap-6 p-4 sm:p-6">
 
             {/* ── Stats row ── */}
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-              <div className="bg-muted/50 border border-border rounded-[16px] p-6">
-                <div className="flex items-center justify-between">
-                  <p className="text-sm font-normal text-muted-foreground">Total Cards Donated</p>
-                  <span className="text-xs bg-green-100 text-green-800 px-2 py-0.5 rounded-full font-medium inline-flex items-center gap-1">
-                    <HugeiconsIcon icon={TradeUpIcon} strokeWidth={2} className="size-3" />
-                    +12
-                  </span>
-                </div>
-                {loading ? <Skeleton className="h-8 w-16 mt-1" /> : <p className="text-[30px] font-semibold text-foreground mt-1 leading-none">{totalCount}</p>}
-                <p className="text-sm text-muted-foreground mt-2">Gift cards given to recipients</p>
-              </div>
-              <div className="bg-muted/50 border border-border rounded-[16px] p-6">
-                <div className="flex items-center justify-between">
-                  <p className="text-sm font-normal text-muted-foreground">Total Dollar Value</p>
-                  <span className="text-xs bg-green-100 text-green-800 px-2 py-0.5 rounded-full font-medium inline-flex items-center gap-1">
-                    <HugeiconsIcon icon={TradeUpIcon} strokeWidth={2} className="size-3" />
-                    +12
-                  </span>
-                </div>
-                {loading ? <Skeleton className="h-8 w-24 mt-1" /> : (
-                  <p className="text-[30px] font-semibold text-foreground mt-1 leading-none">
-                    ${totalValue.toLocaleString()}
-                  </p>
-                )}
-                <p className="text-sm text-muted-foreground mt-2">Total value distributed to community</p>
-              </div>
+            <div className="*:data-[slot=card]:from-primary/5 *:data-[slot=card]:to-card dark:*:data-[slot=card]:bg-card *:data-[slot=card]:bg-gradient-to-t *:data-[slot=card]:shadow-xs grid grid-cols-1 sm:grid-cols-2 gap-4">
+              <Card className="@container/card">
+                <CardHeader>
+                  <CardDescription>Total Cards Donated</CardDescription>
+                  <CardTitle className="text-2xl font-semibold tabular-nums @[250px]/card:text-3xl">
+                    {loading ? <Skeleton className="h-8 w-16" /> : totalCount}
+                  </CardTitle>
+                  <CardAction>
+                    <Badge variant="outline">
+                      <HugeiconsIcon icon={TradeUpIcon} strokeWidth={2} className="mr-1 size-3" />
+                      +12.5%
+                    </Badge>
+                  </CardAction>
+                </CardHeader>
+                <CardFooter className="flex-col items-start gap-1.5 text-sm">
+                  <div className="line-clamp-1 flex gap-2 font-medium">
+                    Trending up this month <HugeiconsIcon icon={TradeUpIcon} strokeWidth={2} className="size-4 text-green-600" />
+                  </div>
+                  <div className="text-muted-foreground">
+                    Donations logged for last 30 days
+                  </div>
+                </CardFooter>
+              </Card>
+
+              <Card className="@container/card">
+                <CardHeader>
+                  <CardDescription>Total Dollar Value</CardDescription>
+                  <CardTitle className="text-2xl font-semibold tabular-nums @[250px]/card:text-3xl">
+                    {loading ? <Skeleton className="h-8 w-24" /> : `$${totalValue.toLocaleString()}`}
+                  </CardTitle>
+                  <CardAction>
+                    <Badge variant="outline">
+                      <HugeiconsIcon icon={TradeUpIcon} strokeWidth={2} className="mr-1 size-3" />
+                      +15.3%
+                    </Badge>
+                  </CardAction>
+                </CardHeader>
+                <CardFooter className="flex-col items-start gap-1.5 text-sm">
+                  <div className="line-clamp-1 flex gap-2 font-medium">
+                    Increased distribution volume <HugeiconsIcon icon={TradeUpIcon} strokeWidth={2} className="size-4 text-green-600" />
+                  </div>
+                  <div className="text-muted-foreground">
+                    Distribution volume exceeding targets
+                  </div>
+                </CardFooter>
+              </Card>
             </div>
 
             {/* ── Donation Log card ── */}

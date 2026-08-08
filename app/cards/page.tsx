@@ -353,13 +353,13 @@ export default function CardsPage() {
     <SidebarProvider>
       <AppSidebar variant="inset" />
       <SidebarInset>
-        <div className="border-b border-border h-12 flex items-center shrink-0 bg-background">
-          <div className="flex items-center gap-4 pl-5">
-            <SidebarTrigger className="bg-card rounded-[6px] p-2 size-8 flex items-center justify-center border shadow-sm" />
-            <Separator orientation="vertical" className="h-4" />
-            <span className="font-medium text-base text-foreground">Add Gift Card</span>
+        {/* ── Header ── */}
+        <header className="flex h-14 shrink-0 items-center gap-2 border-b px-4 bg-background">
+          <SidebarTrigger className="-ml-1" />
+          <div className="w-full flex justify-between items-center">
+            <h1 className="text-lg font-semibold">Add Gift Card</h1>
           </div>
-        </div>
+        </header>
 
         <div className="flex flex-1 min-h-0 bg-background">
           <div className="flex-1 border-r border-border p-4 sm:p-6 overflow-auto">

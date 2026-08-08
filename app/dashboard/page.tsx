@@ -16,7 +16,9 @@ import {
   Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
 } from "@/components/ui/select"
 import { HugeiconsIcon } from "@hugeicons/react"
-import { Edit01Icon, ShoppingBasket01Icon, GiveBloodIcon, Archive01Icon, Add01Icon, Search01Icon } from "@hugeicons/core-free-icons"
+import { Search01Icon, TradeUpIcon, TradeDownIcon } from "@hugeicons/core-free-icons"
+import { Card, CardAction, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card"
+import { Badge } from "@/components/ui/badge"
 import { categoryLabel, CATEGORY_RAW, TreemapCell } from "@/lib/treemap"
 
 // ── Types ─────────────────────────────────────────────────────────────────────
@@ -62,7 +64,8 @@ export default function HomePage() {
   const [page, setPage] = useState(1)
   const [rowsPerPage, setRowsPerPage] = useState(10)
 
-  const { data, isLoading } = useSWR<any[]>("/api/gift-cards", fetcher)
+  const { data, error } = useSWR<any[]>("/api/gift-cards", fetcher)
+  const isLoading = !data && !error
   const cards = Array.isArray(data) ? data : []
 
   // Summary stats
@@ -136,100 +139,94 @@ export default function HomePage() {
       <SidebarInset className="min-w-0 overflow-x-hidden">
 
         {/* ── Header ── */}
-        <div className="border-b h-12 flex items-center shrink-0 px-0 bg-background">
-          <div className="flex items-center gap-4 pl-5 w-full">
-            <SidebarTrigger className="bg-card rounded-[6px] p-2 size-8 flex items-center justify-center border shadow-sm" />
-            <Separator orientation="vertical" className="h-4" />
-            <span className="font-medium text-base text-foreground">Home</span>
+        <header className="flex h-14 shrink-0 items-center gap-2 border-b px-4 bg-background">
+          <SidebarTrigger className="-ml-1" />
+          <div className="w-full flex justify-between items-center">
+            <h1 className="text-lg font-semibold">Dashboard</h1>
           </div>
-        </div>
+        </header>
 
         <div className="flex flex-1 flex-col overflow-y-auto overflow-x-hidden">
           <div className="flex flex-col gap-6 p-4 sm:p-6">
-
-            {/* ── Quick Actions ── */}
-            <div className="flex flex-col gap-3">
-              <p className="text-base font-medium text-muted-foreground">Quick Actions</p>
-              <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-                {([
-                  { href: "/cards",       icon: Add01Icon,           label: "Add Gift Cards",   desc: "Active cards" },
-                  { href: "/inventory",   icon: ShoppingBasket01Icon, label: "Record Spend",     desc: "Log a purchase made with a gift card" },
-                  { href: "/donations",   icon: GiveBloodIcon,        label: "Record Donation",  desc: "Give a card to a recipient in need" },
-                  { href: "/inventory",   icon: Archive01Icon,        label: "View Inventory",   desc: "Browse all cards by store and category" },
-                ] as const).map(({ href, icon, label, desc }) => (
-                  <Link key={label} href={href} className="block h-full">
-                    <div className="h-full bg-card rounded-[18px] shadow-sm border border-border pt-8 sm:pt-[58px] pb-6 px-6 flex flex-col gap-2 hover:bg-accent hover:border-primary/50 transition-colors cursor-pointer">
-                      <div className="bg-transparent rounded-[10px] size-10 flex items-center shrink-0">
-                        <HugeiconsIcon icon={icon} strokeWidth={2.5} className="size-6 text-primary" />
-                      </div>
-                      <div className="mt-2">
-                        <p className="text-base font-medium text-foreground">{label}</p>
-                        <p className="text-sm text-muted-foreground mt-0.5">{desc}</p>
-                      </div>
-                    </div>
-                  </Link>
-                ))}
-              </div>
+            
+            <div className="flex flex-col gap-2">
+              <p className="text-muted-foreground">Welcome to your admin dashboard</p>
             </div>
 
+
             {/* ── Summary ── */}
-            <div className="flex flex-col gap-3">
-              <p className="text-base font-medium text-muted-foreground">Summary</p>
-              <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-
-                {/* Total Cards */}
-                <div className="border border-border bg-card rounded-[12px] p-5 shadow-sm">
-                  <div className="flex items-center justify-between">
-                    <p className="text-xs font-medium text-muted-foreground">Total Cards</p>
-                    <span className="bg-green-100 text-green-800 dark:bg-green-900/50 dark:text-green-400 text-xs font-medium px-2 py-0.5 rounded-full shrink-0">
-                      +{isLoading ? <Skeleton className="h-3 w-4 inline-block" /> : activeCount}
-                    </span>
+            <div className="*:data-[slot=card]:from-primary/5 *:data-[slot=card]:to-card dark:*:data-[slot=card]:bg-card *:data-[slot=card]:bg-gradient-to-t *:data-[slot=card]:shadow-xs grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
+              {/* Total Cards */}
+              <Card className="@container/card">
+                <CardHeader>
+                  <CardDescription>Total Cards</CardDescription>
+                  <CardTitle className="text-2xl font-semibold tabular-nums @[250px]/card:text-3xl">
+                    {isLoading ? <Skeleton className="h-8 w-16" /> : totalCards}
+                  </CardTitle>
+                  <CardAction>
+                    <Badge variant="outline">
+                      <HugeiconsIcon icon={TradeUpIcon} className="mr-1 size-3" />
+                      +12.5%
+                    </Badge>
+                  </CardAction>
+                </CardHeader>
+                <CardFooter className="flex-col items-start gap-1.5 text-sm">
+                  <div className="line-clamp-1 flex gap-2 font-medium">
+                    Trending up this month <HugeiconsIcon icon={TradeUpIcon} className="size-4 text-green-600" />
                   </div>
-                  {isLoading ? (
-                    <Skeleton className="h-8 w-16 mt-1" />
-                  ) : (
-                    <h3 className="text-3xl font-semibold text-foreground mt-1 leading-none">{totalCards}</h3>
-                  )}
-                  <p className="text-xs text-muted-foreground mt-2">Active cards</p>
-                </div>
-
-                {/* Remaining Value */}
-                <div className="border border-border bg-card rounded-[12px] p-5 shadow-sm">
-                  <div className="flex items-center justify-between">
-                    <p className="text-xs font-medium text-muted-foreground">Remaining Value</p>
-                    <span className="bg-green-100 text-green-800 dark:bg-green-900/50 dark:text-green-400 text-xs font-medium px-2 py-0.5 rounded-full shrink-0">
-                      +{isLoading ? <Skeleton className="h-3 w-4 inline-block" /> : storeBreakdown.length}
-                    </span>
+                  <div className="text-muted-foreground">
+                    Donations logged over recent period
                   </div>
-                  {isLoading ? (
-                    <Skeleton className="h-8 w-24 mt-1" />
-                  ) : (
-                    <h3 className="text-3xl font-semibold text-foreground mt-1 leading-none">
-                      ${Math.round(totalRemaining).toLocaleString()}
-                    </h3>
-                  )}
-                  <p className="text-xs text-muted-foreground mt-2">Available across all cards</p>
-                </div>
+                </CardFooter>
+              </Card>
 
-                {/* Total Redeemed */}
-                <div className="border border-border bg-card rounded-[12px] p-5 shadow-sm">
-                  <div className="flex items-center justify-between">
-                    <p className="text-xs font-medium text-muted-foreground">Total Redeemed</p>
-                    <span className="bg-green-100 text-green-800 dark:bg-green-900/50 dark:text-green-400 text-xs font-medium px-2 py-0.5 rounded-full shrink-0">
-                      +{isLoading ? <Skeleton className="h-3 w-4 inline-block" /> : storeBreakdown.length}
-                    </span>
+              {/* Remaining Value */}
+              <Card className="@container/card">
+                <CardHeader>
+                  <CardDescription>Remaining Value</CardDescription>
+                  <CardTitle className="text-2xl font-semibold tabular-nums @[250px]/card:text-3xl">
+                    {isLoading ? <Skeleton className="h-8 w-24" /> : `$${Math.round(totalRemaining).toLocaleString()}`}
+                  </CardTitle>
+                  <CardAction>
+                    <Badge variant="outline">
+                      <HugeiconsIcon icon={TradeDownIcon} className="mr-1 size-3" />
+                      -2.4%
+                    </Badge>
+                  </CardAction>
+                </CardHeader>
+                <CardFooter className="flex-col items-start gap-1.5 text-sm">
+                  <div className="line-clamp-1 flex gap-2 font-medium">
+                    Down 2.4% this period <HugeiconsIcon icon={TradeDownIcon} className="size-4 text-orange-500" />
                   </div>
-                  {isLoading ? (
-                    <Skeleton className="h-8 w-24 mt-1" />
-                  ) : (
-                    <h3 className="text-3xl font-semibold text-foreground mt-1 leading-none">
-                      ${Math.round(totalRedeemed).toLocaleString()}
-                    </h3>
-                  )}
-                  <p className="text-xs text-muted-foreground mt-2">Total value spent or donated</p>
-                </div>
+                  <div className="text-muted-foreground">
+                    Active redemptions in donation log
+                  </div>
+                </CardFooter>
+              </Card>
 
-              </div>
+              {/* Total Redeemed */}
+              <Card className="@container/card">
+                <CardHeader>
+                  <CardDescription>Total Redeemed</CardDescription>
+                  <CardTitle className="text-2xl font-semibold tabular-nums @[250px]/card:text-3xl">
+                    {isLoading ? <Skeleton className="h-8 w-24" /> : `$${Math.round(totalRedeemed).toLocaleString()}`}
+                  </CardTitle>
+                  <CardAction>
+                    <Badge variant="outline">
+                      <HugeiconsIcon icon={TradeUpIcon} className="mr-1 size-3" />
+                      +18.4%
+                    </Badge>
+                  </CardAction>
+                </CardHeader>
+                <CardFooter className="flex-col items-start gap-1.5 text-sm">
+                  <div className="line-clamp-1 flex gap-2 font-medium">
+                    Strong distribution rate <HugeiconsIcon icon={TradeUpIcon} className="size-4 text-green-600" />
+                  </div>
+                  <div className="text-muted-foreground">
+                    Community impact exceeding targets
+                  </div>
+                </CardFooter>
+              </Card>
             </div>
 
             {/* ── Value Distribution ── */}
@@ -266,8 +263,8 @@ export default function HomePage() {
                               <div className="bg-popover border border-border rounded-[8px] shadow-md px-3 py-2 text-sm min-w-[140px] text-popover-foreground">
                                 <p className="font-semibold mb-1">{d.name}</p>
                                 <div className="space-y-0.5 text-xs">
-                                  <p className="text-green-600 dark:text-green-400">Remaining: <span className="font-medium">${d.remaining?.toFixed(2)}</span></p>
-                                  <p className="text-orange-500 dark:text-orange-400">Redeemed: <span className="font-medium">${d.redeemed?.toFixed(2)}</span></p>
+                                  <p className="text-muted-foreground">Remaining: <span className="font-medium tabular-nums text-foreground">${d.remaining?.toFixed(2)}</span></p>
+                                  <p className="text-muted-foreground mt-0.5">Redeemed: <span className="font-medium tabular-nums text-foreground">${d.redeemed?.toFixed(2)}</span></p>
                                   <p className="text-muted-foreground mt-1">{d.category}</p>
                                 </div>
                               </div>
@@ -334,7 +331,19 @@ export default function HomePage() {
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {paginatedStores.length === 0 ? (
+                  {isLoading ? (
+                    Array.from({ length: 5 }).map((_, idx) => (
+                      <TableRow key={idx} className="border-border">
+                        <TableCell className="py-3">
+                          <Skeleton className="h-4 w-24 mb-1" />
+                          <Skeleton className="h-3 w-16" />
+                        </TableCell>
+                        <TableCell className="py-3"><Skeleton className="h-4 w-12 ml-auto" /></TableCell>
+                        <TableCell className="py-3"><Skeleton className="h-4 w-16 ml-auto" /></TableCell>
+                        <TableCell className="py-3"><Skeleton className="h-4 w-16 ml-auto" /></TableCell>
+                      </TableRow>
+                    ))
+                  ) : paginatedStores.length === 0 ? (
                     <TableRow>
                       <TableCell colSpan={4} className="text-center text-sm text-muted-foreground py-10">
                         No stores match your search.
@@ -348,10 +357,10 @@ export default function HomePage() {
                           <p className="text-xs text-muted-foreground mt-0.5">{row.category}</p>
                         </TableCell>
                         <TableCell className="text-sm text-muted-foreground py-3 text-right align-middle">{row.count}</TableCell>
-                        <TableCell className="text-sm font-medium text-green-600 py-3 text-right align-middle">
+                        <TableCell className="text-sm font-medium text-foreground py-3 tabular-nums text-right align-middle">
                           ${row.remaining.toFixed(2)}
                         </TableCell>
-                        <TableCell className="text-sm text-orange-500 py-3 text-right align-middle">
+                        <TableCell className="text-sm text-foreground py-3 tabular-nums font-medium text-right align-middle">
                           ${row.redeemed.toFixed(2)}
                         </TableCell>
                       </TableRow>

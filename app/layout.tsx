@@ -5,15 +5,16 @@ import { TooltipProvider } from "@/components/ui/tooltip";
 import { Toaster } from "@/components/ui/sonner";
 import { ThemeProvider } from "@/components/theme-provider";
 
-const roboto = Roboto({
-  weight: ['300', '400', '500', '700'],
+import { Geist, Geist_Mono } from "next/font/google";
+
+const geistSans = Geist({
+  variable: "--font-geist-sans",
   subsets: ["latin"],
-  variable: "--font-roboto",
 });
 
-const robotoSlab = Roboto_Slab({
+const geistMono = Geist_Mono({
+  variable: "--font-geist-mono",
   subsets: ["latin"],
-  variable: "--font-roboto-slab",
 });
 
 export const metadata: Metadata = {
@@ -31,7 +32,7 @@ export default function RootLayout({
       {/* eslint-disable-next-line @next/next/no-sync-scripts */}
       <script src="https://mcp.figma.com/mcp/html-to-design/capture.js" async></script>
       <body
-        className={`${roboto.variable} ${robotoSlab.variable} antialiased`}
+        className={`${geistSans.variable} ${geistMono.variable} antialiased`}
       >
         <ThemeProvider
           attribute="class"

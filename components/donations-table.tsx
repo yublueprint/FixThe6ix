@@ -73,7 +73,7 @@ const DonationsTable = ({filteredData, loading}: {filteredData: any[], loading?:
                     <span className="text-muted-foreground">{"DONATION_OUT"}</span>
                     </TableCell>
                 <TableCell className="py-3">
-                    <span className="text-green-600 dark:text-green-400 text-xs font-semibold px-2.5 py-1 rounded-full">
+                    <span className="tabular-nums font-medium text-foreground text-sm">
                     ${d.amount}
                     </span>
                 </TableCell>
