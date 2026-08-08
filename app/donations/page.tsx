@@ -4,6 +4,8 @@ import * as React from "react"
 import { AppSidebar } from "@/components/app-sidebar"
 import { SidebarInset, SidebarProvider, SidebarTrigger } from "@/components/ui/sidebar"
 import { Separator } from "@/components/ui/separator"
+import useSWR from "swr"
+import { fetcher } from "@/lib/fetcher"
 import {
   Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
 } from "@/components/ui/select"
@@ -12,6 +14,7 @@ import { HugeiconsIcon } from "@hugeicons/react"
 import { ArrowLeft01Icon, ArrowLeftDoubleIcon, ArrowRight01Icon, ArrowRightDoubleIcon, ArrowDown01Icon, Search01Icon, TradeUpIcon } from "@hugeicons/core-free-icons"
 import { cn } from "@/lib/utils"
 import DonationsTable from "@/components/donations-table"
+import { Skeleton } from "@/components/ui/skeleton"
 
 function formatFilterDate(iso: string) {
   if (!iso) return ""
@@ -107,19 +110,9 @@ function FilterDateField({
 // ── Page ─────────────────────────────────────────────────────────────────────
 
 export default function DonationsPage() {
-  const [data, setData] = React.useState<any[]>([])
-  const [loading, setLoading] = React.useState(true)
-
-  React.useEffect(() => {
-    fetch("/api/transactions?type=DONATION_OUT")
-      .then(res => res.json())
-      .then(data => {
-        if (Array.isArray(data)) setData(data)
-        else setData([])
-      })
-      .catch(console.error)
-      .finally(() => setLoading(false))
-  }, [])
+  const { data: txData, error: txError } = useSWR<any[]>("/api/transactions?type=DONATION_OUT", fetcher)
+  const loading = !txData && !txError
+  const data = Array.isArray(txData) ? txData : []
 
   const [filters, setFilters] = React.useState({
     startDate: "", endDate: "", store: "", recipient: "",
@@ -190,7 +183,7 @@ export default function DonationsPage() {
                     +12
                   </span>
                 </div>
-                <p className="text-[30px] font-semibold text-foreground mt-1 leading-none">{totalCount}</p>
+                {loading ? <Skeleton className="h-8 w-16 mt-1" /> : <p className="text-[30px] font-semibold text-foreground mt-1 leading-none">{totalCount}</p>}
                 <p className="text-sm text-muted-foreground mt-2">Gift cards given to recipients</p>
               </div>
               <div className="bg-muted/50 border border-border rounded-[16px] p-6">
@@ -201,9 +194,11 @@ export default function DonationsPage() {
                     +12
                   </span>
                 </div>
-                <p className="text-[30px] font-semibold text-foreground mt-1 leading-none">
-                  ${totalValue.toLocaleString()}
-                </p>
+                {loading ? <Skeleton className="h-8 w-24 mt-1" /> : (
+                  <p className="text-[30px] font-semibold text-foreground mt-1 leading-none">
+                    ${totalValue.toLocaleString()}
+                  </p>
+                )}
                 <p className="text-sm text-muted-foreground mt-2">Total value distributed to community</p>
               </div>
             </div>
@@ -277,7 +272,7 @@ export default function DonationsPage() {
                 </div>
               </div>
 
-              <DonationsTable filteredData={paginatedData}/>
+              <DonationsTable filteredData={paginatedData} loading={loading} />
 
               {/* Footer count */}
               <div className="px-6 py-3 border-t border-border flex items-center justify-between">

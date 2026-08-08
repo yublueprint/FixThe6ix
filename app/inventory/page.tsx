@@ -4,6 +4,7 @@ import * as React from "react"
 import { AppSidebar } from "@/components/app-sidebar"
 import { SidebarInset, SidebarProvider, SidebarTrigger } from "@/components/ui/sidebar"
 import { Separator } from "@/components/ui/separator"
+import { Skeleton } from "@/components/ui/skeleton"
 import {
   Table, TableBody, TableCell, TableHead, TableHeader, TableRow,
 } from "@/components/ui/table"
@@ -21,7 +22,9 @@ import {
 ShoppingBasket01Icon, GiveBloodIcon, Delete01Icon, Edit01Icon
 } from "@hugeicons/core-free-icons"
 import { cn } from "@/lib/utils"
-import { categoryLabel } from "@/lib/treemap"
+import { CATEGORY_RAW, categoryLabel } from "@/lib/treemap"
+import useSWR from "swr"
+import { fetcher } from "@/lib/fetcher"
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 
@@ -81,9 +84,13 @@ function fmt(iso: string) {
 // ── Page ──────────────────────────────────────────────────────────────────────
 
 export default function InventoryPage() {
-  const [cards, setCards] = React.useState<GiftCard[]>([])
-  const [volunteers, setVolunteers] = React.useState<Volunteer[]>([])
-  const [loading, setLoading] = React.useState(true)
+  const { data: cardsData, error: cardsError, mutate: mutateCards } = useSWR<GiftCard[]>("/api/gift-cards", fetcher)
+  const cards = Array.isArray(cardsData) ? cardsData : []
+
+  const { data: volunteersData, error: volsError } = useSWR<Volunteer[]>("/api/volunteers", fetcher)
+  const volunteers = Array.isArray(volunteersData) ? volunteersData : []
+
+  const loading = (!cardsData && !cardsError) || (!volunteersData && !volsError)
   const [filterStore, setFilterStore] = React.useState("All")
   const [filterCategory, setFilterCategory] = React.useState("All")
   const [searchQuery, setSearchQuery] = React.useState("")
@@ -154,29 +161,6 @@ export default function InventoryPage() {
   const totalRemaining = statsCards.reduce((s, c) => s + Number(c.remainingAmount), 0)
   const totalInitial = statsCards.reduce((s, c) => s + Number(c.initialAmount), 0)
 
-  const fetchData = React.useCallback(async () => {
-    fetch("/api/gift-cards")
-      .then(res => res.json())
-      .then(data => {
-        if (Array.isArray(data)) setCards(data)
-        else setCards([])
-      })
-      .catch(console.error)
-      .finally(() => setLoading(false))
-
-    fetch("/api/volunteers")
-      .then(res => res.json())
-      .then(data => {
-        if (Array.isArray(data)) setVolunteers(data)
-        else setVolunteers([])
-      })
-      .catch(console.error)
-  }, [])
-
-  React.useEffect(() => {
-    fetchData()
-  }, [fetchData])
-
   async function handleAddGiftCard() {
     setAddErr("")
     setAddSuccess("")
@@ -207,7 +191,7 @@ export default function InventoryPage() {
       setNewLast4("")
       setNewInitialAmount("")
       setNewNotes("")
-      fetchData()
+      mutateCards()
     } catch (e) {
       setAddErr("An error occurred")
     }
@@ -220,7 +204,9 @@ export default function InventoryPage() {
       setSelectedId(id)
       setShowSpend(false); setShowDonate(false)
       setSpendAmt(""); setSpendVol(""); setSpendNotes(""); setSpendErr("")
-      setDonateAmt(""); setDonateRecip(""); setDonateVol(""); setDonateNotes("")
+      setDonateAmt("");      setDonateRecip("")
+      setDonateVol("")
+      setDonateNotes("")
       setDonateErr(""); setDonateFull(true)
     }
   }
@@ -251,8 +237,10 @@ export default function InventoryPage() {
         setSpendErr(d.error || "Failed to record spend")
         return
       }
-      setShowSpend(false); setSpendAmt(""); setSpendVol(""); setSpendNotes("")
-      fetchData()
+      setShowSpend(false);      setSpendAmt("")
+      setSpendVol("")
+      setSpendNotes("")
+      mutateCards()
     } catch (e) {
       setSpendErr("An error occurred")
     }
@@ -293,7 +281,7 @@ export default function InventoryPage() {
       }
       setShowDonate(false)
       setDonateAmt(""); setDonateRecip(""); setDonateVol(""); setDonateNotes(""); setDonateFull(true)
-      fetchData()
+      mutateCards()
     } catch (e) {
       setDonateErr("An error occurred")
     }
@@ -304,7 +292,7 @@ export default function InventoryPage() {
       try {
         await fetch(`/api/gift-cards/${id}`, { method: "DELETE" })
         if (selectedId === id) setSelectedId(null)
-        fetchData()
+      mutateCards()
       } catch (e) {
         console.error(e)
       }
@@ -341,8 +329,8 @@ export default function InventoryPage() {
             remainingAmount: remaining,
           }),
         })
-        setShowEditSheet(false);
-        fetchData()
+        setShowEditSheet(false)
+      mutateCards()
       } catch (e) {
         console.error(e)
       }
@@ -376,7 +364,11 @@ export default function InventoryPage() {
               ].map(s => (
                 <div key={s.label} className="border border-border rounded-[12px] p-5 bg-card">
                   <p className="text-xs font-medium text-muted-foreground">{s.label}</p>
-                  <p className="text-[30px] font-semibold text-foreground mt-1 leading-none">{s.value}</p>
+                  {loading ? (
+                    <Skeleton className="h-8 w-16 mt-1" />
+                  ) : (
+                    <p className="text-[30px] font-semibold text-foreground mt-1 leading-none">{s.value}</p>
+                  )}
                   <p className="text-xs text-muted-foreground mt-2">{s.sub}</p>
                 </div>
               ))}
@@ -518,7 +510,21 @@ export default function InventoryPage() {
                     </TableRow>
                   </TableHeader>
                   <TableBody>
-                    {filteredCards.length === 0 ? (
+                    {loading ? (
+                      Array.from({ length: 5 }).map((_, idx) => (
+                        <TableRow key={idx}>
+                          <TableCell className="py-3 pl-6"><Skeleton className="h-4 w-4 rounded-sm" /></TableCell>
+                          <TableCell className="py-3"><Skeleton className="h-4 w-24" /></TableCell>
+                          <TableCell className="py-3"><Skeleton className="h-4 w-16" /></TableCell>
+                          <TableCell className="py-3"><Skeleton className="h-4 w-16" /></TableCell>
+                          <TableCell className="py-3"><Skeleton className="h-4 w-20" /></TableCell>
+                          <TableCell className="py-3"><Skeleton className="h-4 w-16" /></TableCell>
+                          <TableCell className="py-3"><Skeleton className="h-4 w-16 rounded-full" /></TableCell>
+                          <TableCell className="py-3"><Skeleton className="h-4 w-12" /></TableCell>
+                          <TableCell className="py-3 pr-6"><Skeleton className="h-4 w-8 float-right" /></TableCell>
+                        </TableRow>
+                      ))
+                    ) : filteredCards.length === 0 ? (
                       <TableRow>
                         <TableCell colSpan={9} className="h-24 text-center text-muted-foreground text-sm">
                           No cards match your search.

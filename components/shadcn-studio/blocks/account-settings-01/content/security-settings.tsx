@@ -13,7 +13,7 @@ import { toast } from 'sonner'
 import { MFAChallenge } from '@/components/mfa-challenge'
 
 const requirements = [
-  { regex: /.{12,}/, text: 'At least 12 characters' },
+  { regex: /.{8,}/, text: 'At least 8 characters' },
   { regex: /[a-z]/, text: 'At least 1 lowercase letter' },
   { regex: /[A-Z]/, text: 'At least 1 uppercase letter' },
   { regex: /[0-9]/, text: 'At least 1 number' },
@@ -64,8 +64,8 @@ export default function SecuritySettings({ user }: { user: any }) {
 
   async function handlePasswordUpdate(e: React.FormEvent) {
     e.preventDefault();
-    if (strengthScore < requirements.length - 1) {
-       toast.error("Please meet most password requirements before saving.");
+    if (strengthScore < requirements.length) {
+       toast.error("Please meet all password requirements before saving.");
        return;
     }
     setLoading(true);

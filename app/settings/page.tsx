@@ -6,33 +6,26 @@ import { SidebarInset, SidebarProvider, SidebarTrigger } from "@/components/ui/s
 
 import UserGeneral from '@/components/shadcn-studio/blocks/account-settings-01/account-settings-01';
 import { createClient } from "@/lib/supabase/client";
+import { Skeleton } from "@/components/ui/skeleton";
+import useSWR from "swr";
+import { fetcher } from "@/lib/fetcher";
 
 
 
 export default function SettingsPage() {
   const [user, setUser] = useState<any>(null);
-  const [role, setRole] = useState("VOLUNTEER");
-  const [roleRequest, setRoleRequest] = useState(false);
   const supabase = createClient();
 
   useEffect(() => {
-    async function loadUser() {
-      const { data: { user } } = await supabase.auth.getUser();
-      if (user) {
-        setUser(user);
-        fetch(`/api/users/${user.id}`)
-          .then(res => res.json())
-          .then(data => {
-            if (data?.user) {
-              setRole(data.user.role);
-              setRoleRequest(data.user.roleRequest);
-            }
-          })
-          .catch(console.error);
-      }
-    }
-    loadUser();
+    supabase.auth.getUser().then(({ data: { user } }) => {
+      if (user) setUser(user);
+    });
   }, []);
+
+  const { data, isLoading } = useSWR(user ? `/api/users/${user.id}` : null, fetcher);
+  const role = data?.user?.role || "VOLUNTEER";
+  const roleRequest = data?.user?.roleRequest || false;
+  const loading = !user || isLoading;
 
   return (
     <SidebarProvider>
@@ -47,7 +40,21 @@ export default function SettingsPage() {
           <div className='w-full py-8'>
             <div className='mx-auto min-h-screen max-w-7xl px-4 sm:px-6 lg:px-8'>
                 <div className='mt-4'>
-                  <UserGeneral user={user} role={role} roleRequest={roleRequest} onRefresh={() => window.location.reload()} />
+                  {loading ? (
+                    <div className="flex w-full max-w-lg flex-col gap-7 pt-4">
+                      <div className="flex flex-col gap-3">
+                        <Skeleton className="h-4 w-20" />
+                        <Skeleton className="h-10 w-full" />
+                      </div>
+                      <div className="flex flex-col gap-3">
+                        <Skeleton className="h-4 w-24" />
+                        <Skeleton className="h-10 w-full" />
+                      </div>
+                      <Skeleton className="h-10 w-32" />
+                    </div>
+                  ) : (
+                    <UserGeneral user={user} role={role} roleRequest={roleRequest} onRefresh={() => window.location.reload()} />
+                  )}
                 </div>
             </div>
           </div>

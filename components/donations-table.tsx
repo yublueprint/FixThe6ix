@@ -4,9 +4,10 @@ import {
 import { PaintBrush01Icon, Delete02Icon } from "@hugeicons/core-free-icons";
 import { HugeiconsIcon } from "@hugeicons/react";
 import { useEffect, useState } from "react";
+import { Skeleton } from "@/components/ui/skeleton"
 
 
-const DonationsTable = ({filteredData}: {filteredData: any[]}) => {
+const DonationsTable = ({filteredData, loading}: {filteredData: any[], loading?: boolean}) => {
 
     const [selectedBoxes, setSelectedBoxes] = useState<boolean[]>([]);
 
@@ -45,7 +46,21 @@ const DonationsTable = ({filteredData}: {filteredData: any[]}) => {
             </TableRow>
         </TableHeader>
         <TableBody>
-            {filteredData.length > 0 ? (
+            {loading ? (
+                Array.from({ length: 5 }).map((_, idx) => (
+                    <TableRow key={idx}>
+                        <TableCell><Skeleton className="h-4 w-4" /></TableCell>
+                        <TableCell className="py-3 pl-6"><Skeleton className="h-4 w-24" /></TableCell>
+                        <TableCell className="py-3"><Skeleton className="h-4 w-32" /></TableCell>
+                        <TableCell className="py-3"><Skeleton className="h-4 w-16 rounded-full" /></TableCell>
+                        <TableCell className="py-3"><Skeleton className="h-4 w-24" /></TableCell>
+                        <TableCell className="py-3"><Skeleton className="h-4 w-24" /></TableCell>
+                        <TableCell className="py-3"><Skeleton className="h-4 w-32" /></TableCell>
+                        <TableCell className="py-3"><Skeleton className="h-4 w-4" /></TableCell>
+                        <TableCell className="py-3"><Skeleton className="h-4 w-4" /></TableCell>
+                    </TableRow>
+                ))
+            ) : filteredData.length > 0 ? (
             filteredData.map((d, i) => (
                 <TableRow key={d.id} className="border-border hover:bg-muted/50">
                     <TableCell><input type="checkbox" onChange={(e) => selectThisBox(i)} checked={!!selectedBoxes[i]}/></TableCell>

@@ -25,7 +25,7 @@ import { MFATotpEnroll } from "./mfa-totp-enroll";
 import { MFAPasskeyEnroll } from "./mfa-passkey-enroll";
 
 const requirements = [
-  { regex: /.{12,}/, text: 'At least 12 characters' },
+  { regex: /.{8,}/, text: 'At least 8 characters' },
   { regex: /[a-z]/, text: 'At least 1 lowercase letter' },
   { regex: /[A-Z]/, text: 'At least 1 uppercase letter' },
   { regex: /[0-9]/, text: 'At least 1 number' },
@@ -134,8 +134,8 @@ export function SignupForm({ ...props }: React.ComponentProps<typeof Card>) {
       return;
     }
 
-    if (strengthScore < requirements.length - 1) {
-      setError("Please meet most password requirements.");
+    if (strengthScore < requirements.length) {
+      setError("Please meet all password requirements.");
       return;
     }
 

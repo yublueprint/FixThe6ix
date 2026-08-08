@@ -10,12 +10,11 @@ import { Textarea } from "@/components/ui/textarea"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { HugeiconsIcon } from "@hugeicons/react"
 import {
-  CreditCardIcon,
-  File01Icon,
-  InformationCircleIcon,
-  Upload01Icon,
-  Download01Icon,
+  CreditCardIcon, Add01Icon, InformationCircleIcon, File01Icon,
+  Upload01Icon, Download01Icon, Delete01Icon
 } from "@hugeicons/core-free-icons"
+import useSWR from "swr"
+import { fetcher } from "@/lib/fetcher"
 
 type ExistingCard = {
   id: string
@@ -81,8 +80,11 @@ export default function CardsPage() {
   const [tab, setTab] = React.useState("single")
   const [queue, setQueue] = React.useState<QueueCard[]>([])
   
-  const [existingCards, setExistingCards] = React.useState<ExistingCard[]>([])
-  const [dbStoreNames, setDbStoreNames] = React.useState<string[]>([])
+  const { data: cardsData, mutate: mutateCards } = useSWR<any[]>("/api/gift-cards", fetcher)
+  const existingCards = Array.isArray(cardsData) ? cardsData : []
+
+  const { data: storesData } = useSWR<any[]>("/api/stores", fetcher)
+  const dbStoreNames = Array.isArray(storesData) ? storesData.map((s: any) => s.name) : []
 
   // Single-card form state
   const [store, setStore] = React.useState("")
@@ -101,24 +103,6 @@ export default function CardsPage() {
 
   const storeInputRef = React.useRef<HTMLInputElement>(null)
   const bulkFileInputRef = React.useRef<HTMLInputElement>(null)
-
-  React.useEffect(() => {
-    fetch("/api/gift-cards")
-      .then(res => res.json())
-      .then(data => {
-        if (Array.isArray(data)) setExistingCards(data)
-        else setExistingCards([])
-      })
-      .catch(console.error)
-
-    fetch("/api/stores")
-      .then(res => res.json())
-      .then(data => {
-        if (Array.isArray(data)) setDbStoreNames(data.map((s: any) => s.name))
-        else setDbStoreNames([])
-      })
-      .catch(console.error)
-  }, [])
 
   const storeOptions = React.useMemo(() => {
     const fromData = existingCards.map(card => card.store?.name).filter(Boolean)
@@ -164,12 +148,7 @@ export default function CardsPage() {
     }
     
     // Refresh the list
-    fetch("/api/gift-cards")
-      .then(res => res.json())
-      .then(data => {
-        if (Array.isArray(data)) setExistingCards(data)
-      })
-      .catch(console.error)
+    mutateCards()
 
     setQueue([])
   }

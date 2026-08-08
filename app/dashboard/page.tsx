@@ -1,6 +1,9 @@
 "use client"
 
 import { useState, useEffect, useMemo, type ReactNode } from "react"
+import { Skeleton } from "@/components/ui/skeleton"
+import useSWR from "swr"
+import { fetcher } from "@/lib/fetcher"
 import Link from "next/link"
 import { Treemap, ResponsiveContainer, Tooltip } from "recharts"
 import { AppSidebar } from "@/components/app-sidebar"
@@ -13,10 +16,7 @@ import {
   Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
 } from "@/components/ui/select"
 import { HugeiconsIcon } from "@hugeicons/react"
-import {
-  Add01Icon, ShoppingBasket01Icon, GiveBloodIcon, Archive01Icon,
-  Search01Icon,
-} from "@hugeicons/core-free-icons"
+import { Edit01Icon, ShoppingBasket01Icon, GiveBloodIcon, Archive01Icon, Add01Icon, Search01Icon } from "@hugeicons/core-free-icons"
 import { categoryLabel, CATEGORY_RAW, TreemapCell } from "@/lib/treemap"
 
 // ── Types ─────────────────────────────────────────────────────────────────────
@@ -57,21 +57,13 @@ function PagBtn({ onClick, disabled, children }: { onClick: () => void; disabled
 // ── Page ──────────────────────────────────────────────────────────────────────
 
 export default function HomePage() {
-  const [cards, setCards] = useState<GiftCard[]>([])
   const [activeCategory, setActiveCategory] = useState("All")
   const [searchQuery, setSearchQuery] = useState("")
   const [page, setPage] = useState(1)
   const [rowsPerPage, setRowsPerPage] = useState(10)
 
-  useEffect(() => {
-    fetch("/api/gift-cards")
-      .then(res => res.json())
-      .then(data => {
-        if (Array.isArray(data)) setCards(data)
-        else setCards([])
-      })
-      .catch(console.error)
-  }, [])
+  const { data, isLoading } = useSWR<any[]>("/api/gift-cards", fetcher)
+  const cards = Array.isArray(data) ? data : []
 
   // Summary stats
   const totalCards = cards.length
@@ -190,10 +182,14 @@ export default function HomePage() {
                   <div className="flex items-center justify-between">
                     <p className="text-xs font-medium text-muted-foreground">Total Cards</p>
                     <span className="bg-green-100 text-green-800 dark:bg-green-900/50 dark:text-green-400 text-xs font-medium px-2 py-0.5 rounded-full shrink-0">
-                      +{activeCount}
+                      +{isLoading ? <Skeleton className="h-3 w-4 inline-block" /> : activeCount}
                     </span>
                   </div>
-                  <h3 className="text-3xl font-semibold text-foreground mt-1 leading-none">{totalCards}</h3>
+                  {isLoading ? (
+                    <Skeleton className="h-8 w-16 mt-1" />
+                  ) : (
+                    <h3 className="text-3xl font-semibold text-foreground mt-1 leading-none">{totalCards}</h3>
+                  )}
                   <p className="text-xs text-muted-foreground mt-2">Active cards</p>
                 </div>
 
@@ -202,12 +198,16 @@ export default function HomePage() {
                   <div className="flex items-center justify-between">
                     <p className="text-xs font-medium text-muted-foreground">Remaining Value</p>
                     <span className="bg-green-100 text-green-800 dark:bg-green-900/50 dark:text-green-400 text-xs font-medium px-2 py-0.5 rounded-full shrink-0">
-                      +{storeBreakdown.length}
+                      +{isLoading ? <Skeleton className="h-3 w-4 inline-block" /> : storeBreakdown.length}
                     </span>
                   </div>
-                  <h3 className="text-3xl font-semibold text-foreground mt-1 leading-none">
-                    ${Math.round(totalRemaining).toLocaleString()}
-                  </h3>
+                  {isLoading ? (
+                    <Skeleton className="h-8 w-24 mt-1" />
+                  ) : (
+                    <h3 className="text-3xl font-semibold text-foreground mt-1 leading-none">
+                      ${Math.round(totalRemaining).toLocaleString()}
+                    </h3>
+                  )}
                   <p className="text-xs text-muted-foreground mt-2">Available across all cards</p>
                 </div>
 
@@ -216,12 +216,16 @@ export default function HomePage() {
                   <div className="flex items-center justify-between">
                     <p className="text-xs font-medium text-muted-foreground">Total Redeemed</p>
                     <span className="bg-green-100 text-green-800 dark:bg-green-900/50 dark:text-green-400 text-xs font-medium px-2 py-0.5 rounded-full shrink-0">
-                      +{storeBreakdown.length}
+                      +{isLoading ? <Skeleton className="h-3 w-4 inline-block" /> : storeBreakdown.length}
                     </span>
                   </div>
-                  <h3 className="text-3xl font-semibold text-foreground mt-1 leading-none">
-                    ${Math.round(totalRedeemed).toLocaleString()}
-                  </h3>
+                  {isLoading ? (
+                    <Skeleton className="h-8 w-24 mt-1" />
+                  ) : (
+                    <h3 className="text-3xl font-semibold text-foreground mt-1 leading-none">
+                      ${Math.round(totalRedeemed).toLocaleString()}
+                    </h3>
+                  )}
                   <p className="text-xs text-muted-foreground mt-2">Total value spent or donated</p>
                 </div>
 
@@ -239,7 +243,9 @@ export default function HomePage() {
 
               {/* Treemap */}
               <div className="px-5 pb-4">
-                {treemapData.length === 0 ? (
+                {isLoading ? (
+                  <Skeleton className="w-full h-[220px] rounded-md" />
+                ) : treemapData.length === 0 ? (
                   <div className="flex h-[200px] items-center justify-center text-sm text-muted-foreground">
                     No remaining balance in this category.
                   </div>

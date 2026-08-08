@@ -16,11 +16,16 @@ import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Field, FieldGroup, FieldLabel } from "@/components/ui/field";
 import { Checkbox } from "@/components/ui/checkbox";
+import { Skeleton } from "@/components/ui/skeleton";
+import useSWR from "swr";
+import { fetcher } from "@/lib/fetcher";
 
 export default function AdminUsersPage() {
-  const [users, setUsers] = useState<any[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [currentUserRole, setCurrentUserRole] = useState("VOLUNTEER");
+  const { data, error, mutate: mutateUsers } = useSWR<any>("/api/admin/users", fetcher);
+  const loading = !data && !error;
+  const users: any[] = data?.users || [];
+  const currentUserRole = data?.currentUserRole || "VOLUNTEER";
+
   const [selectedUser, setSelectedUser] = useState<any>(null);
   const [showConfirm, setShowConfirm] = useState(false);
   
@@ -49,28 +54,13 @@ export default function AdminUsersPage() {
   const router = useRouter();
 
   useEffect(() => {
-    fetchUsers();
-  }, []);
-
-  async function fetchUsers() {
-    try {
-      const res = await fetch("/api/admin/users");
-      if (res.status === 403) {
-        toast.error("You do not have permission to view this page.");
-        router.push("/dashboard");
-        return;
-      }
-      const data = await res.json();
-      setUsers(data.users || []);
-      if (data.currentUserRole) {
-        setCurrentUserRole(data.currentUserRole);
-      }
-    } catch (e) {
+    if (error?.status === 403) {
+      toast.error("You do not have permission to view this page.");
+      router.push("/dashboard");
+    } else if (error) {
       toast.error("Failed to load users");
-    } finally {
-      setLoading(false);
     }
-  }
+  }, [error, router]);
 
   function handlePromoteClick(user: any) {
     setSelectedUser(user);
@@ -96,7 +86,7 @@ export default function AdminUsersPage() {
       if (res.ok) {
         toast.success(`Admin role granted to ${selectedUser.name || selectedUser.email}`);
         setShowConfirm(false);
-        fetchUsers();
+        mutateUsers();
       } else {
         toast.error("Failed to grant role");
       }
@@ -126,7 +116,7 @@ export default function AdminUsersPage() {
           setGeneratedLink(data.action_link);
           setShowGeneratedLinkDialog(true);
         }
-        fetchUsers();
+        mutateUsers();
       } else {
         toast.error(data.error || "Failed to send invite");
       }
@@ -145,7 +135,7 @@ export default function AdminUsersPage() {
       });
       if (res.ok) {
         toast.success("Invitation cancelled.");
-        fetchUsers();
+        mutateUsers();
       } else {
         toast.error("Failed to cancel invitation.");
       }
@@ -209,7 +199,7 @@ export default function AdminUsersPage() {
       if (res.ok) {
         toast.success("User updated successfully");
         setShowEditDialog(false);
-        fetchUsers();
+        mutateUsers();
       } else {
         toast.error("Failed to update user");
       }
@@ -259,7 +249,22 @@ export default function AdminUsersPage() {
                 </TableHeader>
                 <TableBody>
                   {loading ? (
-                    <TableRow><TableCell colSpan={5} className="text-center h-24">Loading users...</TableCell></TableRow>
+                    Array.from({ length: 5 }).map((_, idx) => (
+                      <TableRow key={idx}>
+                        <TableCell className="pl-6"><Skeleton className="h-4 w-4 rounded-sm" /></TableCell>
+                        <TableCell className="py-4">
+                          <div className="flex items-center gap-3">
+                            <Skeleton className="h-10 w-10 rounded-full shrink-0" />
+                            <div className="flex flex-col gap-1 w-full">
+                              <Skeleton className="h-4 w-32" />
+                              <Skeleton className="h-3 w-40" />
+                            </div>
+                          </div>
+                        </TableCell>
+                        <TableCell><Skeleton className="h-4 w-24" /></TableCell>
+                        <TableCell className="pr-6 text-right"><Skeleton className="h-4 w-12 ml-auto" /></TableCell>
+                      </TableRow>
+                    ))
                   ) : users.length === 0 ? (
                     <TableRow><TableCell colSpan={5} className="text-center h-24">No users found.</TableCell></TableRow>
                   ) : users.map(user => (
