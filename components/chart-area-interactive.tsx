@@ -306,7 +306,7 @@ export function ChartAreaInteractive() {
                       day: "numeric",
                     })
                   }}
-                  valueFormatter={(value) => {
+                  formatter={(value) => {
                     return `$${value}`
                   }}
                   indicator="dot"

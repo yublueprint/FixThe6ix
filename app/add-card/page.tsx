@@ -17,21 +17,11 @@ import {
   Add01Icon, CreditCardIcon, File01Icon, DownloadIcon,
   CheckmarkCircle01Icon, AlertCircleIcon, ArrowRight01Icon,
 } from "@hugeicons/core-free-icons"
-import existingData from "../redemption/data.json"
 
 // ── Constants ──────────────────────────────────────────────────────────────────
 
-const STORE_OPTIONS = [
-  "Amazon", "Applebee's", "Best Buy", "Burger King", "Chick-fil-A", "Chipotle",
-  "Costco", "CVS Pharmacy", "Dollar General", "Domino's", "Dunkin'", "Gap",
-  "Home Depot", "IHOP", "KFC", "Kohl's", "Kroger", "Macy's", "McDonald's",
-  "Old Navy", "Olive Garden", "Panera Bread", "Pizza Hut", "Safeway", "Starbucks",
-  "Subway", "Taco Bell", "Target", "Trader Joe's", "TJ Maxx", "Walgreens",
-  "Walmart", "Wendy's", "Whole Foods",
-].sort()
-
-const VOLUNTEERS = ["Amy Brown", "James Lee", "Lisa Chen", "Mike Davis", "Sarah Johnson"]
-const CSV_TEMPLATE = `store,last4,amount,added_by,notes\nWalmart,1234,100.00,Sarah Johnson,Example card\nTarget,5678,50.00,Mike Davis,`
+// CSV template now matches the actual RawRGCData export format
+const CSV_TEMPLATE = `vendor,last4,remaining,redeemed,delivered_to,delivery_date\nChapters-Indigo,4172,,0.73,ParkRoad,2023-04-20\nTim Hortons,1088,0.17,,,2023-04-20`
 const today = new Date().toISOString().slice(0, 10)
 
 // ── Types ──────────────────────────────────────────────────────────────────────
@@ -41,9 +31,18 @@ interface FormData {
   dateAdded: string; addedBy: string; notes: string
 }
 interface FieldErrors { store?: string; last4?: string; amount?: string; addedBy?: string }
+
+// Matches the new CSV columns
 interface CSVRow {
-  rowNum: number; store: string; last4: string; amount: string
-  addedBy: string; notes: string; status: "valid" | "duplicate" | "error"; errors: string[]
+  rowNum: number
+  vendor: string
+  last4: string
+  remaining: string
+  redeemed: string
+  delivered_to: string
+  delivery_date: string
+  status: "valid" | "duplicate" | "error"
+  errors: string[]
 }
 
 const EMPTY_FORM: FormData = { store: "", last4: "", amount: "", dateAdded: today, addedBy: "", notes: "" }
@@ -60,38 +59,107 @@ function validateForm(f: FormData): FieldErrors {
   return e
 }
 
-function findDuplicate(store: string, last4: string, cards: typeof existingData.cards) {
-  return cards.find(c => c.store.toLowerCase() === store.toLowerCase() && c.last4 === last4) ?? null
-}
-
+// Parse CSV with new column headers
 function parseCSV(text: string): CSVRow[] {
   const lines = text.trim().split(/\r?\n/)
-  const data = lines[0]?.toLowerCase().includes("store") ? lines.slice(1) : lines
+  if (lines.length === 0) return []
+
+  const headers = splitCSV(lines[0]).map(h => h.toLowerCase().trim())
+  const col = {
+    vendor: headers.indexOf("vendor"),
+    last4: headers.indexOf("last4"),
+    remaining: headers.indexOf("remaining"),
+    redeemed: headers.indexOf("redeemed"),
+    delivered_to: headers.indexOf("delivered_to"),
+    delivery_date: headers.indexOf("delivery_date"),
+  }
+
+  const data = lines.slice(1)
   return data.filter(l => l.trim()).map((line, i) => {
-    const [store = "", last4 = "", amount = "", addedBy = "", ...rest] = line.split(",").map(p => p.trim())
+    const parts = splitCSV(line).map(p => p.trim())
+
+    const vendor = col.vendor !== -1 ? parts[col.vendor] || "" : ""
+    const last4 = col.last4 !== -1 ? parts[col.last4] || "" : ""
+    const remaining = col.remaining !== -1 ? parts[col.remaining] || "" : ""
+    const redeemed = col.redeemed !== -1 ? parts[col.redeemed] || "" : ""
+    const delivered_to = col.delivered_to !== -1 ? parts[col.delivered_to] || "" : ""
+    const delivery_date = col.delivery_date !== -1 ? parts[col.delivery_date] || "" : ""
+
     const errors: string[] = []
-    if (!store) errors.push("Store missing")
-    if (!/^\d{4}$/.test(last4)) errors.push("Last 4 must be 4 digits")
-    if (!amount || isNaN(parseFloat(amount)) || parseFloat(amount) <= 0) errors.push("Invalid amount")
-    if (!addedBy) errors.push("Added by missing")
-    const isDup = findDuplicate(store, last4, existingData.cards)
+    if (!vendor) errors.push("Vendor missing")
+
+    // last4 validation — strip non-digits and check length
+    const last4Clean = last4.replace(/\D/g, "")
+    if (last4Clean.length !== 4) errors.push("Last 4 must be 4 digits")
+
+    // At least one of remaining or redeemed must be a valid number
+    const remainingNum = parseFloat(remaining.replace(/[^0-9.-]+/g, ""))
+    const redeemedNum = parseFloat(redeemed.replace(/[^0-9.-]+/g, ""))
+    if (isNaN(remainingNum) && isNaN(redeemedNum)) {
+      errors.push("At least one of remaining or redeemed must be a valid amount")
+    }
+
     return {
-      rowNum: i + 1, store, last4, amount, addedBy, notes: rest.join(",").trim(),
-      status: errors.length ? "error" : isDup ? "duplicate" : "valid", errors,
+      rowNum: i + 1,
+      vendor,
+      last4: last4Clean.length >= 4 ? last4Clean.slice(-4) : last4Clean,
+      remaining,
+      redeemed,
+      delivered_to,
+      delivery_date,
+      status: errors.length ? "error" : "valid",
+      errors,
     } as CSVRow
   })
+
+  function splitCSV(line: string): string[] {
+    const out: string[] = []
+    let cur = ""
+    let inQuotes = false
+
+    for (let i = 0; i < line.length; i++) {
+      const c = line[i]
+      const next = line[i + 1]
+
+      if (c === '"' && next === '"') {
+        cur += '"'
+        i++
+      } else if (c === '"') {
+        inQuotes = !inQuotes
+      } else if (c === ',' && !inQuotes) {
+        out.push(cur)
+        cur = ""
+      } else {
+        cur += c
+      }
+    }
+
+    out.push(cur)
+    return out
+  }
 }
+
 
 // ── Store Combobox ─────────────────────────────────────────────────────────────
 
-function StoreCombobox({ value, onChange, error }: { value: string; onChange: (v: string) => void; error?: string }) {
+function StoreCombobox({
+  value,
+  onChange,
+  error,
+  options,
+}: {
+  value: string
+  onChange: (v: string) => void
+  error?: string
+  options: string[]
+}) {
   const [open, setOpen] = useState(false)
   const [query, setQuery] = useState(value)
   const ref = useRef<HTMLDivElement>(null)
 
   const filtered = useMemo(() =>
-    !query.trim() ? STORE_OPTIONS : STORE_OPTIONS.filter(s => s.toLowerCase().includes(query.toLowerCase()))
-  , [query])
+    !query.trim() ? options : options.filter(s => s.toLowerCase().includes(query.toLowerCase()))
+  , [query, options])
 
   useEffect(() => { setQuery(value) }, [value])
   useEffect(() => {
@@ -118,7 +186,7 @@ function StoreCombobox({ value, onChange, error }: { value: string; onChange: (v
               className="w-full px-3 py-2 text-left text-sm hover:bg-accent hover:text-accent-foreground transition-colors"
             >{store}</button>
           ))}
-          {query.trim() && !STORE_OPTIONS.find(s => s.toLowerCase() === query.toLowerCase()) && (
+          {query.trim() && !options.find(s => s.toLowerCase() === query.toLowerCase()) && (
             <button type="button"
               onMouseDown={e => { e.preventDefault(); onChange(query.trim()); setQuery(query.trim()); setOpen(false) }}
               className="w-full px-3 py-2 text-left text-sm text-muted-foreground hover:bg-accent border-t hover:text-accent-foreground transition-colors"
@@ -134,12 +202,15 @@ function StoreCombobox({ value, onChange, error }: { value: string; onChange: (v
 // ── Main Page ──────────────────────────────────────────────────────────────────
 
 export default function AddCardPage() {
+  // Store options fetched from Supabase
+  const [storeOptions, setStoreOptions] = useState<string[]>([])
+  const [storesLoading, setStoresLoading] = useState(true)
+
   // Single entry state
   const [form, setFormState] = useState<FormData>(EMPTY_FORM)
   const [fieldErrors, setFieldErrors] = useState<FieldErrors>({})
-  const [pageState, setPageState] = useState<"form" | "confirm-duplicate" | "success">("form")
+  const [pageState, setPageState] = useState<"form" | "success">("form")
   const [addedCards, setAddedCards] = useState<(FormData & { id: number })[]>([])
-  const [pendingDuplicate, setPendingDuplicate] = useState<ReturnType<typeof findDuplicate>>(null)
 
   // CSV state
   const [csvRows, setCsvRows] = useState<CSVRow[]>([])
@@ -147,21 +218,26 @@ export default function AddCardPage() {
   const [csvImportDone, setCsvImportDone] = useState(false)
   const [importedCount, setImportedCount] = useState(0)
   const [isDragging, setIsDragging] = useState(false)
+  const [isImporting, setIsImporting] = useState(false)
+  const [importError, setImportError] = useState<string | null>(null)
+  const [importSummary, setImportSummary] = useState<{
+    inserted: number
+    updated: number
+    failed: { line: number; errors: string[] }[]
+    missingStores: string[]
+  } | null>(null)
   const fileInputRef = useRef<HTMLInputElement>(null)
 
-  const allCards = useMemo(() => [
-    ...existingData.cards,
-    ...addedCards.map((c, i) => ({
-      id: 9000 + i, store: c.store, last4: c.last4,
-      initialBalance: parseFloat(c.amount), remainingBalance: parseFloat(c.amount),
-      status: "Active", addedDate: c.dateAdded, addedBy: c.addedBy,
-    })),
-  ], [addedCards])
-
-  const liveDuplicate = useMemo(() => {
-    if (!form.store || form.last4.length !== 4) return null
-    return findDuplicate(form.store, form.last4, allCards)
-  }, [form.store, form.last4, allCards])
+  // Fetch stores from Supabase on mount
+  useEffect(() => {
+    fetch("/api/stores")
+      .then(r => r.json())
+      .then(data => {
+        setStoreOptions((data ?? []).map((s: { name: string }) => s.name))
+      })
+      .catch(() => setStoreOptions([]))
+      .finally(() => setStoresLoading(false))
+  }, [])
 
   function setField<K extends keyof FormData>(key: K, value: string) {
     setFormState(prev => ({ ...prev, [key]: value }))
@@ -171,9 +247,7 @@ export default function AddCardPage() {
   function handleSubmit() {
     const errors = validateForm(form)
     if (Object.keys(errors).length) { setFieldErrors(errors); return }
-    const dup = findDuplicate(form.store, form.last4, allCards)
-    if (dup) { setPendingDuplicate(dup); setPageState("confirm-duplicate") }
-    else commitCard()
+    commitCard()
   }
 
   function commitCard() {
@@ -183,24 +257,106 @@ export default function AddCardPage() {
 
   function handleAddAnother() {
     setFormState(EMPTY_FORM); setFieldErrors({})
-    setPendingDuplicate(null); setPageState("form")
+    setPageState("form")
   }
 
   function processFile(file: File) {
-    if (!file.name.endsWith(".csv")) return
-    setCsvFileName(file.name); setCsvImportDone(false)
+    if (!file.name.endsWith(".csv")) {
+      alert("Please upload a valid CSV file.")
+      return
+    }
+
+    setCsvFileName(file.name)
+    setCsvImportDone(false)
+    setImportSummary(null)
+    setImportError(null)
+
     const reader = new FileReader()
-    reader.onload = e => setCsvRows(parseCSV(e.target?.result as string))
+    reader.onload = e => {
+      const text = e.target?.result as string
+      const rows = parseCSV(text)
+
+      // Detect duplicates within the CSV itself
+      const seen = new Set<string>()
+      rows.forEach(row => {
+        if (row.status === "error") return
+        const key = `${row.vendor.toLowerCase()}-${row.last4}`
+        if (seen.has(key)) {
+          row.status = "duplicate"
+          row.errors.push("Duplicate within this CSV file")
+        }
+        seen.add(key)
+      })
+
+      setCsvRows(rows)
+    }
     reader.readAsText(file)
   }
 
-  function handleCSVImport(includeAll: boolean) {
-    const toImport = csvRows.filter(r => includeAll ? r.status !== "error" : r.status === "valid")
-    setAddedCards(prev => [...prev, ...toImport.map((r, i) => ({
-      id: Date.now() + i, store: r.store, last4: r.last4,
-      amount: r.amount, dateAdded: today, addedBy: r.addedBy, notes: r.notes,
-    }))])
-    setImportedCount(toImport.length); setCsvImportDone(true)
+  async function handleCSVImport(includeAll: boolean) {
+    setImportError(null)
+    setCsvImportDone(false)
+    setImportSummary(null)
+    setImportedCount(0)
+    setIsImporting(true)
+
+    const toImport = csvRows.filter(r =>
+      includeAll ? r.status !== "error" : r.status === "valid"
+    )
+
+    const failed: { line: number; errors: string[] }[] = csvRows
+      .filter(r => r.status === "error")
+      .map(r => ({ line: r.rowNum, errors: r.errors }))
+
+    if (!toImport.length) {
+      setImportError("No valid rows available to import.")
+      setIsImporting(false)
+      return
+    }
+
+    const payload = {
+      fileName: csvFileName || "gift_card_import.csv",
+      rows: toImport.map(row => ({
+        vendor: row.vendor,
+        last4: row.last4,
+        remaining: parseFloat(row.remaining.replace(/[^0-9.-]+/g, "")) || 0,
+        redeemed: row.redeemed ? parseFloat(row.redeemed.replace(/[^0-9.-]+/g, "")) || null : null,
+        delivered_to: row.delivered_to || null,
+        delivery_date: row.delivery_date || null,
+        status: row.status,
+        errors: row.errors,
+        rowNumber: row.rowNum,
+      })),
+    }
+
+    try {
+      const response = await fetch("/api/import-cards", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(payload),
+      })
+
+      const result = await response.json()
+
+      if (!response.ok) {
+        setImportError(result?.error || "Import failed.")
+        setIsImporting(false)
+        return
+      }
+
+      setImportedCount(result.inserted ?? 0)
+      setImportSummary({
+        inserted: result.inserted ?? 0,
+        updated: result.updated ?? 0,
+        failed,
+        missingStores: result.missingStores ?? [],
+      })
+      setCsvImportDone(true)
+    } catch (error) {
+      setImportError(error instanceof Error ? error.message : "Import failed.")
+    } finally {
+      setIsImporting(false)
+    }
   }
 
   function downloadTemplate() {
@@ -304,42 +460,6 @@ export default function AddCardPage() {
                 </div>
               )}
 
-              {/* Duplicate confirm state */}
-              {pageState === "confirm-duplicate" && pendingDuplicate && (
-                <div className="flex flex-1 flex-col justify-between p-6">
-                  <div className="rounded-lg border border-yellow-200 bg-yellow-50 p-4">
-                    <div className="flex items-start gap-3">
-                      <div className="mt-0.5 shrink-0 rounded-full bg-yellow-100 p-1">
-                        <HugeiconsIcon icon={AlertCircleIcon} strokeWidth={2} className="size-4 text-yellow-600" />
-                      </div>
-                      <div>
-                        <p className="font-medium text-yellow-900 text-sm">Possible duplicate</p>
-                        <p className="mt-1 text-sm text-yellow-800">
-                          A <strong>{pendingDuplicate.store}</strong> card ending in <strong>{pendingDuplicate.last4}</strong> already exists.
-                        </p>
-                        <p className="mt-0.5 text-xs text-yellow-700">
-                          Added {pendingDuplicate.addedDate} by {pendingDuplicate.addedBy} · ${pendingDuplicate.remainingBalance.toFixed(2)} remaining
-                        </p>
-                      </div>
-                    </div>
-                  </div>
-                  <div className="flex flex-col gap-2 pt-4">
-                    <button
-                      onClick={commitCard}
-                      className="w-full bg-[#0f172a] text-white text-sm font-medium px-4 py-2 rounded-[6px] hover:bg-[#1e293b] transition-colors"
-                    >
-                      Add Anyway
-                    </button>
-                    <button
-                      className="w-full border border-[#e2e8f0] text-sm font-medium px-4 py-2 rounded-[6px] hover:bg-[#f5f5f5] transition-colors"
-                      onClick={() => { setPendingDuplicate(null); setPageState("form") }}
-                    >
-                      Go Back &amp; Edit
-                    </button>
-                  </div>
-                </div>
-              )}
-
               {/* Form state */}
               {pageState === "form" && (
                 <div className="flex flex-1 flex-col">
@@ -350,7 +470,15 @@ export default function AddCardPage() {
 
                     <div className="space-y-1.5">
                       <Label className="text-xs font-medium text-[#737373]">Store</Label>
-                      <StoreCombobox value={form.store} onChange={v => setField("store", v)} error={fieldErrors.store} />
+                      <StoreCombobox
+                        value={form.store}
+                        onChange={v => setField("store", v)}
+                        error={fieldErrors.store}
+                        options={storeOptions}
+                      />
+                      {storesLoading && (
+                        <p className="text-xs text-[#737373]">Loading stores…</p>
+                      )}
                     </div>
 
                     <div className="grid grid-cols-2 gap-3">
@@ -363,12 +491,6 @@ export default function AddCardPage() {
                           className={pillInput(fieldErrors.last4 ? "border-destructive" : "")}
                         />
                         {fieldErrors.last4 && <p className="text-xs text-destructive">{fieldErrors.last4}</p>}
-                        {!fieldErrors.last4 && liveDuplicate && (
-                          <p className="text-xs text-yellow-600 flex items-center gap-1">
-                            <HugeiconsIcon icon={AlertCircleIcon} strokeWidth={2} className="size-3" />
-                            Possible duplicate
-                          </p>
-                        )}
                       </div>
                       <div className="space-y-1.5">
                         <Label className="text-xs font-medium text-[#737373]">Amount</Label>
@@ -405,15 +527,11 @@ export default function AddCardPage() {
                     <div className="space-y-1.5">
                       <Label className="text-xs font-medium text-[#737373]">Added by</Label>
                       <Input
-                        list="volunteers-list"
                         value={form.addedBy}
                         onChange={e => setField("addedBy", e.target.value)}
                         placeholder="Volunteer name"
                         className={pillInput(fieldErrors.addedBy ? "border-destructive" : "")}
                       />
-                      <datalist id="volunteers-list">
-                        {VOLUNTEERS.map(v => <option key={v} value={v} />)}
-                      </datalist>
                       {fieldErrors.addedBy && <p className="text-xs text-destructive">{fieldErrors.addedBy}</p>}
                     </div>
 
@@ -481,7 +599,7 @@ export default function AddCardPage() {
 
                 {!csvRows.length && (
                   <div className="mt-2 rounded-[8px] border border-[#e5e5e5] bg-white/80 px-4 py-2 text-xs text-[#737373] font-mono">
-                    store, last4, amount, added_by, notes
+                    vendor, last4, remaining, redeemed, delivered_to, delivery_date
                   </div>
                 )}
               </div>
@@ -502,7 +620,7 @@ export default function AddCardPage() {
                     <div className="flex items-center gap-2">
                       <button
                         className="text-sm font-medium text-[#0a0a0a] px-3 h-8 rounded-[26px] hover:bg-[#e5e5e5] transition-colors"
-                        onClick={() => { setCsvRows([]); setCsvFileName(""); setCsvImportDone(false) }}
+                        onClick={() => { setCsvRows([]); setCsvFileName(""); setCsvImportDone(false); setImportSummary(null) }}
                       >
                         Clear
                       </button>
@@ -517,11 +635,62 @@ export default function AddCardPage() {
                   </div>
 
                   {csvImportDone && (
-                    <div className="rounded-lg border border-green-200 bg-green-50 px-4 py-3 flex items-center gap-3">
-                      <HugeiconsIcon icon={CheckmarkCircle01Icon} strokeWidth={2} className="size-4 text-green-600 shrink-0" />
-                      <p className="text-sm text-green-800">
-                        <strong>{importedCount} card{importedCount !== 1 ? "s" : ""}</strong> imported successfully.
-                      </p>
+                    <div className="space-y-3">
+                      <div className="rounded-lg border border-green-200 bg-green-50 px-4 py-3 flex items-center gap-3">
+                        <HugeiconsIcon icon={CheckmarkCircle01Icon} strokeWidth={2} className="size-4 text-green-600 shrink-0" />
+                        <p className="text-sm text-green-800">
+                          <strong>{importedCount} card{importedCount !== 1 ? "s" : ""}</strong> imported successfully.
+                        </p>
+                      </div>
+
+                      {importSummary && (
+                        <div className="rounded-lg border border-[#e2e8f0] bg-white p-4 space-y-3">
+                          <p className="font-medium text-sm text-[#0a0a0a]">Import Summary</p>
+                          <div className="grid grid-cols-3 gap-3">
+                            <div className="space-y-1">
+                              <p className="text-xs text-[#737373]">Inserted</p>
+                              <p className="text-lg font-semibold text-green-600">{importSummary.inserted}</p>
+                            </div>
+                            <div className="space-y-1">
+                              <p className="text-xs text-[#737373]">Updated</p>
+                              <p className="text-lg font-semibold text-blue-600">{importSummary.updated}</p>
+                            </div>
+                            <div className="space-y-1">
+                              <p className="text-xs text-[#737373]">Failed</p>
+                              <p className="text-lg font-semibold text-destructive">{importSummary.failed.length}</p>
+                            </div>
+                          </div>
+
+                          {importSummary.missingStores.length > 0 && (
+                            <div className="pt-2 border-t border-[#e2e8f0]">
+                              <p className="text-xs font-medium text-yellow-700 mb-1">Stores not found in database:</p>
+                              <p className="text-xs text-[#737373]">{importSummary.missingStores.join(", ")}</p>
+                            </div>
+                          )}
+
+                          {importSummary.failed.length > 0 && (
+                            <div className="space-y-2 pt-2 border-t border-[#e2e8f0]">
+                              <p className="text-xs font-medium text-destructive">Failed Rows</p>
+                              <div className="space-y-2 text-xs text-[#737373] max-h-40 overflow-y-auto">
+                                {importSummary.failed.map((fail, i) => (
+                                  <div key={i} className="ml-2">
+                                    <p className="font-medium text-destructive">Line {fail.line}:</p>
+                                    {fail.errors.map((err, j) => (
+                                      <p key={j} className="text-destructive">• {err}</p>
+                                    ))}
+                                  </div>
+                                ))}
+                              </div>
+                            </div>
+                          )}
+                        </div>
+                      )}
+                    </div>
+                  )}
+
+                  {importError && (
+                    <div className="rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
+                      {importError}
                     </div>
                   )}
 
@@ -531,11 +700,12 @@ export default function AddCardPage() {
                         <TableRow>
                           <TableHead className="w-8">#</TableHead>
                           <TableHead>Status</TableHead>
-                          <TableHead>Store</TableHead>
+                          <TableHead>Vendor</TableHead>
                           <TableHead>Last 4</TableHead>
-                          <TableHead>Amount</TableHead>
-                          <TableHead>Added By</TableHead>
-                          <TableHead>Notes</TableHead>
+                          <TableHead>Remaining</TableHead>
+                          <TableHead>Redeemed</TableHead>
+                          <TableHead>Delivered To</TableHead>
+                          <TableHead>Delivery Date</TableHead>
                         </TableRow>
                       </TableHeader>
                       <TableBody>
@@ -554,11 +724,12 @@ export default function AddCardPage() {
                                 </div>
                               )}
                             </TableCell>
-                            <TableCell className="font-medium text-sm">{row.store || <span className="text-muted-foreground italic">—</span>}</TableCell>
+                            <TableCell className="font-medium text-sm">{row.vendor || <span className="text-muted-foreground italic">—</span>}</TableCell>
                             <TableCell className="text-sm">{row.last4 || <span className="text-muted-foreground italic">—</span>}</TableCell>
-                            <TableCell className="text-sm">{row.amount ? `$${parseFloat(row.amount).toFixed(2)}` : <span className="text-muted-foreground italic">—</span>}</TableCell>
-                            <TableCell className="text-sm">{row.addedBy || <span className="text-muted-foreground italic">—</span>}</TableCell>
-                            <TableCell className="text-xs text-muted-foreground">{row.notes || "—"}</TableCell>
+                            <TableCell className="text-sm">{row.remaining ? `$${parseFloat(row.remaining.replace(/[^0-9.-]+/g, "")).toFixed(2)}` : <span className="text-muted-foreground italic">—</span>}</TableCell>
+                            <TableCell className="text-sm">{row.redeemed ? `$${parseFloat(row.redeemed.replace(/[^0-9.-]+/g, "")).toFixed(2)}` : <span className="text-muted-foreground italic">—</span>}</TableCell>
+                            <TableCell className="text-sm">{row.delivered_to || <span className="text-muted-foreground italic">—</span>}</TableCell>
+                            <TableCell className="text-xs text-muted-foreground">{row.delivery_date || "—"}</TableCell>
                           </TableRow>
                         ))}
                       </TableBody>
@@ -570,17 +741,19 @@ export default function AddCardPage() {
                       {csvValid > 0 && (
                         <button
                           onClick={() => handleCSVImport(false)}
-                          className="bg-[#0f172a] text-white text-sm font-medium px-4 py-2 rounded-[6px] hover:bg-[#1e293b] transition-colors"
+                          disabled={isImporting}
+                          className={`bg-[#0f172a] text-white text-sm font-medium px-4 py-2 rounded-[6px] transition-colors ${isImporting ? "opacity-50 cursor-not-allowed" : "hover:bg-[#1e293b]"}`}
                         >
-                          Import Valid ({csvValid})
+                          {isImporting ? "Importing…" : `Import Valid (${csvValid})`}
                         </button>
                       )}
                       {csvDuplicates > 0 && (
                         <button
                           onClick={() => handleCSVImport(true)}
-                          className="border border-[#e2e8f0] text-sm font-medium px-4 py-2 rounded-[6px] hover:bg-[#f5f5f5] transition-colors"
+                          disabled={isImporting}
+                          className={`border border-[#e2e8f0] text-sm font-medium px-4 py-2 rounded-[6px] transition-colors ${isImporting ? "opacity-50 cursor-not-allowed" : "hover:bg-[#f5f5f5]"}`}
                         >
-                          Import All Except Errors ({csvValid + csvDuplicates})
+                          {isImporting ? "Importing…" : `Import All Except Errors (${csvValid + csvDuplicates})`}
                         </button>
                       )}
                     </div>
