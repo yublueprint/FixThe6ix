@@ -20,15 +20,18 @@ import { HugeiconsIcon } from "@hugeicons/react"
 import {
   Search01Icon, ArrowDown01Icon, ArrowUp01Icon,
 ShoppingBasket01Icon, GiveBloodIcon, Delete01Icon, Edit01Icon, TradeUpIcon, TradeDownIcon,
-CheckmarkCircle01Icon, PlayCircleIcon, CircleIcon
+CheckmarkCircle01Icon, PlayCircleIcon, CircleIcon, MoreHorizontalCircle01Icon, PlusSignIcon
 } from "@hugeicons/core-free-icons"
 import { Card, CardAction, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogClose } from "@/components/ui/dialog"
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogFooter, DialogClose } from "@/components/ui/dialog"
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog"
 import { Combobox, ComboboxInput, ComboboxContent, ComboboxList, ComboboxItem, ComboboxEmpty } from "@/components/ui/combobox"
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger } from "@/components/ui/dropdown-menu"
 import { cn } from "@/lib/utils"
 import { CATEGORY_RAW, categoryLabel } from "@/lib/treemap"
+import { Field, FieldLabel } from "@/components/ui/field"
+import { toast } from "sonner"
 import useSWR from "swr"
 import { fetcher } from "@/lib/fetcher"
 
@@ -60,6 +63,7 @@ type GiftCard = {
   status: string
   createdAt: string
   notes?: string
+  addedBy?: string | null
   transactions: Transaction[]
 }
 
@@ -93,7 +97,7 @@ export default function InventoryPage() {
   const { data: cardsData, error: cardsError, mutate: mutateCards } = useSWR<GiftCard[]>("/api/gift-cards", fetcher)
   const cards = Array.isArray(cardsData) ? cardsData : []
 
-  const { data: volunteersData, error: volsError } = useSWR<Volunteer[]>("/api/volunteers", fetcher)
+  const { data: volunteersData, error: volsError, mutate: mutateVolunteers } = useSWR<Volunteer[]>("/api/volunteers", fetcher)
   const volunteers = Array.isArray(volunteersData) ? volunteersData : []
 
   const loading = (!cardsData && !cardsError) || (!volunteersData && !volsError)
@@ -136,6 +140,10 @@ export default function InventoryPage() {
 
   // Delete Alert State
   const [deleteId, setDeleteId] = React.useState<string | null>(null)
+
+  // Add Volunteer Dialog State
+  const [showAddVolunteerDialog, setShowAddVolunteerDialog] = React.useState(false)
+  const [addVolunteerTarget, setAddVolunteerTarget] = React.useState<"spend" | "donate" | null>(null)
 
   const uniqueStores = React.useMemo(() =>
     [...new Set(cards.map(c => c.store.name))].sort(), [cards])
@@ -413,7 +421,7 @@ export default function InventoryPage() {
                   </CardHeader>
                   <CardFooter className="flex-col items-start gap-1.5 text-sm">
                     <div className="line-clamp-1 flex gap-2 font-medium">
-                      {s.heading} <HugeiconsIcon icon={s.isUp ? TradeUpIcon : TradeDownIcon} strokeWidth={2} className={`size-4 ${s.isUp ? 'text-green-600' : 'text-orange-500'}`} />
+                      {s.heading} <HugeiconsIcon icon={s.isUp ? TradeUpIcon : TradeDownIcon} strokeWidth={2} className={`size-4 text-muted-foreground`} />
                     </div>
                     <div className="text-muted-foreground">
                       {s.sub}
@@ -643,21 +651,32 @@ export default function InventoryPage() {
                                 </span>
                               </div>
                             </TableCell>
-                            <TableCell className="text-sm text-muted-foreground py-3 align-middle">Admin</TableCell>
+                            <TableCell className="text-sm text-muted-foreground py-3 align-middle">{card.addedBy || "—"}</TableCell>
                             <TableCell className="py-3 pr-6 align-middle text-right">
                               <div className="flex items-center justify-end gap-2">
-                                <HugeiconsIcon
-                                  icon={Edit01Icon}
-                                  strokeWidth={2}
-                                  className="size-4 text-muted-foreground hover:text-blue-500 cursor-pointer"
-                                  onClick={(e) => { e.stopPropagation(); openEditCard(card.id); }}
-                                />
-                                <HugeiconsIcon
-                                  icon={Delete01Icon}
-                                  strokeWidth={2}
-                                  className="size-4 text-muted-foreground hover:text-destructive cursor-pointer"
-                                  onClick={(e) => { e.stopPropagation(); setDeleteId(card.id); }}
-                                />
+                                <Button variant="ghost" size="icon" className="h-8 w-8 cursor-pointer text-muted-foreground hover:text-foreground" onClick={(e) => { e.stopPropagation(); openEditCard(card.id); }}>
+                                  <HugeiconsIcon icon={Edit01Icon} strokeWidth={2} className="size-4" />
+                                  <span className="sr-only">Edit</span>
+                                </Button>
+                                <div onClick={(e) => e.stopPropagation()}>
+                                  <DropdownMenu>
+                                    <DropdownMenuTrigger render={
+                                      <Button variant="ghost" size="icon" className="h-8 w-8 cursor-pointer text-muted-foreground hover:text-foreground">
+                                        <HugeiconsIcon icon={MoreHorizontalCircle01Icon} strokeWidth={2} className="size-4" />
+                                        <span className="sr-only">More actions</span>
+                                      </Button>
+                                    } />
+                                    <DropdownMenuContent align="end">
+                                      <DropdownMenuItem
+                                        className="text-red-600 focus:text-red-600 cursor-pointer"
+                                        onClick={(e) => { e.stopPropagation(); setDeleteId(card.id); }}
+                                      >
+                                        <HugeiconsIcon icon={Delete01Icon} strokeWidth={2} className="mr-2 h-4 w-4" />
+                                        Delete
+                                      </DropdownMenuItem>
+                                    </DropdownMenuContent>
+                                  </DropdownMenu>
+                                </div>
                                 <HugeiconsIcon
                                   icon={isOpen ? ArrowUp01Icon : ArrowDown01Icon}
                                   strokeWidth={2}
@@ -708,17 +727,29 @@ export default function InventoryPage() {
                                         </div>
                                         <div className="space-y-1.5">
                                           <Label className="text-xs font-medium text-muted-foreground">Volunteer</Label>
-                                          <Select value={spendVol} onValueChange={(value) => setSpendVol(value ?? "")}>
+                                          <Select value={spendVol} onValueChange={(value) => {
+                                            if (value === "__add_new_volunteer__") {
+                                              setAddVolunteerTarget("spend");
+                                              setShowAddVolunteerDialog(true);
+                                              return;
+                                            }
+                                            setSpendVol(value ?? "");
+                                          }}>
                                             <SelectTrigger size="sm" className="rounded-[6px]">
                                               <SelectValue placeholder="Select volunteer" />
                                             </SelectTrigger>
-                                            <SelectContent>
+                                            <SelectContent className="w-auto min-w-[var(--anchor-width)] max-w-sm max-h-60 overflow-y-auto">
                                               {volunteers.map(v => <SelectItem key={v.id} value={v.name}>{v.name}</SelectItem>)}
+                                              <div className="border-t border-border my-1" />
+                                              <SelectItem value="__add_new_volunteer__" className="text-primary font-medium">
+                                                <HugeiconsIcon icon={PlusSignIcon} strokeWidth={2} className="size-3.5 mr-1" />
+                                                Add Volunteer
+                                              </SelectItem>
                                             </SelectContent>
                                           </Select>
                                         </div>
                                         <div className="space-y-1.5">
-                                          <Label className="text-xs font-medium text-muted-foreground">Notes (optional)</Label>
+                                           <Label className="text-xs font-medium text-muted-foreground">Notes (optional)</Label>
                                           <Input
                                             placeholder="e.g. Groceries for Family A"
                                             value={spendNotes} onChange={e => setSpendNotes(e.target.value)}
@@ -759,12 +790,24 @@ export default function InventoryPage() {
                                         </div>
                                         <div className="space-y-1.5">
                                           <Label className="text-xs font-medium text-muted-foreground">Volunteer</Label>
-                                          <Select value={donateVol} onValueChange={(value) => setDonateVol(value ?? "")}>
+                                          <Select value={donateVol} onValueChange={(value) => {
+                                            if (value === "__add_new_volunteer__") {
+                                              setAddVolunteerTarget("donate");
+                                              setShowAddVolunteerDialog(true);
+                                              return;
+                                            }
+                                            setDonateVol(value ?? "");
+                                          }}>
                                             <SelectTrigger size="sm" className="rounded-[6px]">
                                               <SelectValue placeholder="Select volunteer" />
                                             </SelectTrigger>
-                                            <SelectContent>
+                                            <SelectContent className="w-auto min-w-[var(--anchor-width)] max-w-sm max-h-60 overflow-y-auto">
                                               {volunteers.map(v => <SelectItem key={v.id} value={v.name}>{v.name}</SelectItem>)}
+                                              <div className="border-t border-border my-1" />
+                                              <SelectItem value="__add_new_volunteer__" className="text-primary font-medium">
+                                                <HugeiconsIcon icon={PlusSignIcon} strokeWidth={2} className="size-3.5 mr-1" />
+                                                Add Volunteer
+                                              </SelectItem>
                                             </SelectContent>
                                           </Select>
                                         </div>
@@ -967,6 +1010,267 @@ export default function InventoryPage() {
         </AlertDialogContent>
       </AlertDialog>
 
+      {/* Add Volunteer Dialog */}
+      <InviteUserDialog 
+        open={showAddVolunteerDialog}
+        onOpenChange={(open) => {
+          setShowAddVolunteerDialog(open);
+          if (!open) setAddVolunteerTarget(null);
+        }}
+        onSuccess={async (data) => {
+          await mutateVolunteers();
+          if (data && data.name) {
+            if (addVolunteerTarget === "spend") setSpendVol(data.name);
+            if (addVolunteerTarget === "donate") setDonateVol(data.name);
+          }
+          setAddVolunteerTarget(null);
+        }}
+        defaultRole="VOLUNTEER"
+      />
+
     </SidebarProvider>
   )
+}
+
+function InviteUserDialog({
+  open,
+  onOpenChange,
+  onSuccess,
+  currentUserRole = "VOLUNTEER",
+  defaultRole = "VOLUNTEER"
+}: {
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
+  onSuccess?: (user?: any) => void;
+  currentUserRole?: string;
+  defaultRole?: string;
+}) {
+  const [inviteDisplayName, setInviteDisplayName] = React.useState("");
+  const [inviteEmail, setInviteEmail] = React.useState("");
+  const [inviteRole, setInviteRole] = React.useState(defaultRole);
+  const [inviteCreateAccount, setInviteCreateAccount] = React.useState(false);
+  const [inviting, setInviting] = React.useState(false);
+  
+  const [generatedLink, setGeneratedLink] = React.useState("");
+  const [showGeneratedLinkDialog, setShowGeneratedLinkDialog] = React.useState(false);
+
+  function copyToClipboard(text: string) {
+    navigator.clipboard.writeText(text).then(() => {
+      toast.success("Copied to clipboard");
+    });
+  }
+
+  function handleOpenChange(newOpen: boolean) {
+    onOpenChange(newOpen);
+    if (!newOpen) {
+      setInviteEmail("");
+      setInviteDisplayName("");
+      setInviteRole(defaultRole);
+      setInviteCreateAccount(false);
+    }
+  }
+
+  async function handleInviteSubmit(e: React.FormEvent) {
+    e.preventDefault();
+    setInviting(true);
+
+    // Name-only volunteer (no Supabase auth)
+    if (inviteRole === "VOLUNTEER" && !inviteCreateAccount) {
+      if (!inviteDisplayName.trim()) {
+        toast.error("Please enter a display name for the volunteer.");
+        setInviting(false);
+        return;
+      }
+      try {
+        const res = await fetch("/api/volunteers", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ name: inviteDisplayName.trim() })
+        });
+        const data = await res.json();
+        if (res.ok) {
+          toast.success(`Volunteer "${data.name}" added successfully.`);
+          handleOpenChange(false);
+          if (onSuccess) onSuccess(data);
+        } else {
+          toast.error(data.error || "Failed to add volunteer");
+        }
+      } catch (error) {
+        toast.error("An error occurred while adding the volunteer.");
+      } finally {
+        setInviting(false);
+      }
+      return;
+    }
+
+    // Full account invite (Supabase auth)
+    try {
+      const res = await fetch("/api/admin/users/invite", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ email: inviteEmail, role: inviteRole, name: inviteDisplayName })
+      });
+      const data = await res.json();
+      
+      if (res.ok) {
+        toast.success(`Invitation generated for ${inviteEmail}`);
+        handleOpenChange(false);
+        
+        if (data.action_link) {
+          setGeneratedLink(data.action_link);
+          setShowGeneratedLinkDialog(true);
+        }
+        if (onSuccess) onSuccess(data.user);
+      } else {
+        toast.error(data.error || "Failed to send invite");
+      }
+    } catch (error) {
+      toast.error("An error occurred while inviting the user.");
+    } finally {
+      setInviting(false);
+    }
+  }
+
+  return (
+    <>
+      {/* Main Dialog */}
+      <Dialog open={open} onOpenChange={handleOpenChange}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Add New User</DialogTitle>
+            <DialogDescription>
+              {inviteRole === "VOLUNTEER" && !inviteCreateAccount
+                ? "Add a volunteer by name. No login account will be created."
+                : "Send an email invitation. The user will be able to set their password and complete registration."
+              }
+            </DialogDescription>
+          </DialogHeader>
+          <form onSubmit={handleInviteSubmit}>
+            <div className="py-4 space-y-4">
+              <Field>
+                <FieldLabel>Role</FieldLabel>
+                <Select value={inviteRole} onValueChange={(val) => {
+                  setInviteRole(val || "VOLUNTEER");
+                  if (val !== "VOLUNTEER") setInviteCreateAccount(true);
+                }}>
+                  <SelectTrigger>
+                    <SelectValue placeholder="Select a role" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="VOLUNTEER">Volunteer</SelectItem>
+                    {currentUserRole === 'SUPER_ADMIN' && (
+                      <>
+                        <SelectItem value="ADMIN">Admin</SelectItem>
+                        <SelectItem value="SUPER_ADMIN">Super Admin</SelectItem>
+                      </>
+                    )}
+                  </SelectContent>
+                </Select>
+              </Field>
+
+              {/* Animated account toggle for volunteers */}
+              <div
+                className="overflow-hidden transition-all duration-300 ease-in-out"
+                style={{
+                  maxHeight: inviteRole === "VOLUNTEER" ? "80px" : "0px",
+                  opacity: inviteRole === "VOLUNTEER" ? 1 : 0,
+                }}
+              >
+                <div className="flex items-center justify-between rounded-lg border border-border bg-muted/50 p-3">
+                  <div className="space-y-0.5">
+                    <Label className="text-sm font-medium">Create login account</Label>
+                    <p className="text-xs text-muted-foreground">Allow this volunteer to sign in</p>
+                  </div>
+                  <button
+                    type="button"
+                    role="switch"
+                    aria-checked={inviteCreateAccount}
+                    onClick={() => setInviteCreateAccount(!inviteCreateAccount)}
+                    className={`relative inline-flex h-5 w-9 shrink-0 cursor-pointer items-center rounded-full border-2 border-transparent shadow-xs transition-colors outline-none focus-visible:ring-[3px] focus-visible:ring-ring/50 ${
+                      inviteCreateAccount ? "bg-primary" : "bg-input"
+                    }`}
+                  >
+                    <span
+                      className={`pointer-events-none block size-4 rounded-full bg-background shadow-lg ring-0 transition-transform ${
+                        inviteCreateAccount ? "translate-x-4" : "translate-x-0"
+                      }`}
+                    />
+                  </button>
+                </div>
+              </div>
+
+              <Field>
+                <FieldLabel>{inviteRole === "VOLUNTEER" && !inviteCreateAccount ? "Display Name" : "Display Name (Optional)"}</FieldLabel>
+                <Input 
+                  value={inviteDisplayName} 
+                  onChange={e => setInviteDisplayName(e.target.value)} 
+                  placeholder="Jane Doe"
+                  required={inviteRole === "VOLUNTEER" && !inviteCreateAccount}
+                />
+              </Field>
+
+              {/* Animated email field — only shown when creating an account */}
+              <div
+                className="overflow-hidden transition-all duration-300 ease-in-out"
+                style={{
+                  maxHeight: (inviteRole !== "VOLUNTEER" || inviteCreateAccount) ? "100px" : "0px",
+                  opacity: (inviteRole !== "VOLUNTEER" || inviteCreateAccount) ? 1 : 0,
+                }}
+              >
+                <Field>
+                  <FieldLabel>Email Address</FieldLabel>
+                  <Input 
+                    type="email" 
+                    required={inviteRole !== "VOLUNTEER" || inviteCreateAccount}
+                    value={inviteEmail} 
+                    onChange={e => setInviteEmail(e.target.value)} 
+                    placeholder="volunteer@example.com"
+                  />
+                </Field>
+              </div>
+            </div>
+            <DialogFooter>
+              <Button type="button" variant="outline" onClick={() => handleOpenChange(false)}>Cancel</Button>
+              <Button type="submit" disabled={inviting}>
+                {inviting
+                  ? (inviteRole === "VOLUNTEER" && !inviteCreateAccount ? "Adding..." : "Sending...")
+                  : (inviteRole === "VOLUNTEER" && !inviteCreateAccount ? "Add Volunteer" : "Send Invitation")
+                }
+              </Button>
+            </DialogFooter>
+          </form>
+        </DialogContent>
+      </Dialog>
+
+      {/* Generated Link Dialog */}
+      <Dialog open={showGeneratedLinkDialog} onOpenChange={setShowGeneratedLinkDialog}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Invitation Generated</DialogTitle>
+            <DialogDescription>
+              Share this secure link with the user to allow them to create their account and set a password.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="py-4 space-y-4">
+            <Field>
+              <FieldLabel>Invite Link</FieldLabel>
+              <div className="flex items-center gap-2">
+                <Input 
+                  readOnly 
+                  value={generatedLink} 
+                  className="bg-muted font-mono text-sm"
+                />
+                <Button onClick={() => copyToClipboard(generatedLink)}>
+                  Copy
+                </Button>
+              </div>
+            </Field>
+          </div>
+          <DialogFooter>
+            <Button variant="default" onClick={() => setShowGeneratedLinkDialog(false)}>Done</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+    </>
+  );
 }

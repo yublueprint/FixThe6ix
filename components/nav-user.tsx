@@ -35,7 +35,7 @@ export function NavUser({
       <SidebarMenu>
         <SidebarMenuItem>
           <SidebarMenuButton size="lg" className="hover:bg-transparent cursor-default">
-            <Avatar className="size-8 grayscale">
+            <Avatar className="size-8">
               <AvatarImage src={user.avatar} alt={user.name || user.email} />
               <AvatarFallback>{initials}</AvatarFallback>
             </Avatar>

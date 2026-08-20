@@ -66,7 +66,7 @@ export async function POST(request: Request) {
 
   try {
     const body = await request.json();
-    const { storeName, lastFourDigits, initialAmount, notes } = body;
+    const { storeName, lastFourDigits, initialAmount, notes, addedBy } = body;
 
     if (!storeName || !lastFourDigits || !initialAmount) {
       return NextResponse.json(
@@ -118,6 +118,8 @@ export async function POST(request: Request) {
       );
     }
 
+    const resolvedAddedBy = addedBy?.trim() || user.user_metadata?.full_name || user.email || "Volunteer";
+
     const card = await prisma.giftCard.create({
       data: {
         storeId: store.id,
@@ -126,6 +128,7 @@ export async function POST(request: Request) {
         remainingAmount: amount,
         status: "ACTIVE",
         notes: notes?.trim() || null,
+        addedBy: resolvedAddedBy,
       },
       include: { store: true, transactions: true },
     });

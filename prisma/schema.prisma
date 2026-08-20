@@ -22,6 +22,7 @@ model GiftCard {
   remainingAmount Decimal        @db.Decimal(10, 2)
   status          GiftCardStatus
   notes           String?
+  addedBy         String?
   createdAt       DateTime       @default(now())
   store           Store          @relation(fields: [storeId], references: [id])
   transactions    Transaction[]

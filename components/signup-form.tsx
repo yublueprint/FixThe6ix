@@ -268,7 +268,7 @@ export function SignupForm({ ...props }: React.ComponentProps<typeof Card>) {
                 <Input
                   disabled
                   value={role}
-                  className="cursor-not-allowed bg-muted font-medium text-purple-700"
+                  className="cursor-not-allowed bg-muted font-medium text-foreground"
                 />
               </Field>
             </div>

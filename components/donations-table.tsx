@@ -1,8 +1,10 @@
 import {
   Table, TableBody, TableCell, TableHead, TableHeader, TableRow,
 } from "@/components/ui/table"
-import { PaintBrush01Icon, Delete02Icon } from "@hugeicons/core-free-icons";
+import { PaintBrush01Icon, Delete02Icon, MoreHorizontalCircle01Icon } from "@hugeicons/core-free-icons";
 import { HugeiconsIcon } from "@hugeicons/react";
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
+import { Button } from "@/components/ui/button";
 import { useEffect, useState } from "react";
 import { Skeleton } from "@/components/ui/skeleton"
 
@@ -41,8 +43,7 @@ const DonationsTable = ({filteredData, loading}: {filteredData: any[], loading?:
             <TableHead className="text-xs font-medium text-muted-foreground py-3">Volunteer</TableHead>
             <TableHead className="text-xs font-medium text-muted-foreground py-3">Recipient</TableHead>
             <TableHead className="text-xs font-medium text-muted-foreground py-3">Notes</TableHead>
-            <TableHead className="text-xs font-medium text-muted-foreground py-3"></TableHead>
-            <TableHead className="text-xs font-medium text-muted-foreground py-3"></TableHead>
+            <TableHead className="text-xs font-medium text-muted-foreground py-3 text-right">Action</TableHead>
             </TableRow>
         </TableHeader>
         <TableBody>
@@ -56,8 +57,7 @@ const DonationsTable = ({filteredData, loading}: {filteredData: any[], loading?:
                         <TableCell className="py-3"><Skeleton className="h-4 w-24" /></TableCell>
                         <TableCell className="py-3"><Skeleton className="h-4 w-24" /></TableCell>
                         <TableCell className="py-3"><Skeleton className="h-4 w-32" /></TableCell>
-                        <TableCell className="py-3"><Skeleton className="h-4 w-4" /></TableCell>
-                        <TableCell className="py-3"><Skeleton className="h-4 w-4" /></TableCell>
+                        <TableCell className="py-3 text-right"><Skeleton className="h-8 w-8 ml-auto" /></TableCell>
                     </TableRow>
                 ))
             ) : filteredData.length > 0 ? (
@@ -80,11 +80,27 @@ const DonationsTable = ({filteredData, loading}: {filteredData: any[], loading?:
                 <TableCell className="text-sm text-muted-foreground py-3">{d.volunteerName}</TableCell>
                 <TableCell className="text-sm text-muted-foreground py-3">{d.recipientName}</TableCell>
                 <TableCell className="text-sm text-muted-foreground py-3">{d.notes}</TableCell>
-                <TableCell className="text-sm text-muted-foreground hover:text-blue-500 transition-colors py-3">
-                    <button><HugeiconsIcon icon={PaintBrush01Icon} strokeWidth={2} className="size-4" /></button>
-                </TableCell>
-                <TableCell className="text-sm text-muted-foreground hover:text-red-500 transition-colors py-3">
-                    <button><HugeiconsIcon icon={Delete02Icon} strokeWidth={2} className="size-4" /></button>
+                <TableCell className="py-3 text-right">
+                  <div className="flex items-center justify-end gap-2">
+                    <Button variant="ghost" size="icon" className="h-8 w-8 cursor-pointer text-muted-foreground hover:text-foreground">
+                      <HugeiconsIcon icon={PaintBrush01Icon} strokeWidth={2} className="size-4" />
+                      <span className="sr-only">Edit</span>
+                    </Button>
+                    <DropdownMenu>
+                      <DropdownMenuTrigger render={
+                        <Button variant="ghost" size="icon" className="h-8 w-8 cursor-pointer text-muted-foreground hover:text-foreground">
+                          <HugeiconsIcon icon={MoreHorizontalCircle01Icon} strokeWidth={2} className="size-4" />
+                          <span className="sr-only">More actions</span>
+                        </Button>
+                      } />
+                      <DropdownMenuContent align="end">
+                        <DropdownMenuItem className="text-red-600 focus:text-red-600 cursor-pointer">
+                          <HugeiconsIcon icon={Delete02Icon} strokeWidth={2} className="mr-2 h-4 w-4" />
+                          Delete
+                        </DropdownMenuItem>
+                      </DropdownMenuContent>
+                    </DropdownMenu>
+                  </div>
                 </TableCell>
                 </TableRow>
             ))

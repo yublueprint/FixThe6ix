@@ -7,7 +7,8 @@ import { Input } from "@/components/ui/input";
 import { Field, FieldLabel } from "@/components/ui/field";
 import { toast } from "sonner";
 import { HugeiconsIcon } from "@hugeicons/react";
-import { Delete01Icon, Edit01Icon, FingerPrintIcon } from "@hugeicons/core-free-icons";
+import { Delete01Icon, Edit01Icon, MoreHorizontalCircle01Icon, FingerPrintIcon } from "@hugeicons/core-free-icons";
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 
 type Props = {
   onComplete?: () => void;
@@ -118,24 +119,27 @@ export function MFAPasskeyEnroll({ onComplete, onSkip, showSkip = true }: Props)
                       <span className="text-xs text-muted-foreground mt-1">Status: <span className="text-green-600 font-medium">Active</span></span>
                     </div>
                     <div className="flex items-center gap-1">
-                      <Button
-                        type="button"
-                        variant="ghost"
-                        size="icon"
-                        className="text-muted-foreground hover:text-blue-500 hover:bg-blue-50"
-                        onClick={() => { setEditingId(pk.id); setEditName(pk.friendly_name || ""); }}
-                      >
+                      <Button variant="ghost" size="icon" className="h-8 w-8 text-muted-foreground hover:text-foreground" onClick={() => { setEditingId(pk.id); setEditName(pk.friendly_name || ""); }}>
                         <HugeiconsIcon icon={Edit01Icon} strokeWidth={2} className="size-4" />
+                        <span className="sr-only">Edit Name</span>
                       </Button>
-                      <Button
-                        type="button"
-                        variant="ghost"
-                        size="icon"
-                        className="text-muted-foreground hover:text-red-500 hover:bg-red-50"
-                        onClick={() => deletePasskey(pk.id)}
-                      >
-                        <HugeiconsIcon icon={Delete01Icon} strokeWidth={2} className="size-4" />
-                      </Button>
+                      <DropdownMenu>
+                        <DropdownMenuTrigger render={
+                          <Button variant="ghost" size="icon" className="h-8 w-8 text-muted-foreground hover:text-foreground">
+                            <HugeiconsIcon icon={MoreHorizontalCircle01Icon} strokeWidth={2} className="size-4" />
+                            <span className="sr-only">More actions</span>
+                          </Button>
+                        } />
+                        <DropdownMenuContent align="end">
+                          <DropdownMenuItem
+                            className="text-red-600 focus:text-red-600 cursor-pointer"
+                            onClick={() => deletePasskey(pk.id)}
+                          >
+                            <HugeiconsIcon icon={Delete01Icon} strokeWidth={2} className="mr-2 h-4 w-4" />
+                            Delete
+                          </DropdownMenuItem>
+                        </DropdownMenuContent>
+                      </DropdownMenu>
                     </div>
                   </>
                 )}

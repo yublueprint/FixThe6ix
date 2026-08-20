@@ -15,6 +15,7 @@ import {
 } from "@hugeicons/core-free-icons"
 import useSWR from "swr"
 import { fetcher } from "@/lib/fetcher"
+import { createClient } from "@/lib/supabase/client"
 
 type ExistingCard = {
   id: string
@@ -95,6 +96,17 @@ export default function CardsPage() {
   const [notes, setNotes] = React.useState("")
   const [singleError, setSingleError] = React.useState("")
   const [singleSuccess, setSingleSuccess] = React.useState("")
+  const [currentUser, setCurrentUser] = React.useState("")
+
+  const supabase = createClient()
+
+  React.useEffect(() => {
+    supabase.auth.getUser().then(({ data }) => {
+      const name = data.user?.user_metadata?.full_name || data.user?.email || "Volunteer"
+      setCurrentUser(name)
+      if (!addedBy) setAddedBy(name)
+    })
+  }, [])
 
   // Bulk state
   const [bulkError, setBulkError] = React.useState("")
@@ -129,6 +141,7 @@ export default function CardsPage() {
             lastFourDigits: card.last4,
             initialAmount: card.amount,
             notes: card.notes,
+            addedBy: card.addedBy,
           }),
         })
         if (res.ok) {
@@ -298,7 +311,7 @@ export default function CardsPage() {
         last4: normalizedLast4,
         amount: parsedAmount,
         notes: rowNotes.trim(),
-        addedBy: rowAddedBy.trim(),
+        addedBy: rowAddedBy.trim() || currentUser,
         dateAdded: rowDate,
       })
     }

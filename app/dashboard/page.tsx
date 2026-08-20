@@ -172,7 +172,7 @@ export default function HomePage() {
                 </CardHeader>
                 <CardFooter className="flex-col items-start gap-1.5 text-sm">
                   <div className="line-clamp-1 flex gap-2 font-medium">
-                    Trending up this month <HugeiconsIcon icon={TradeUpIcon} className="size-4 text-green-600" />
+                    Trending up this month <HugeiconsIcon icon={TradeUpIcon} className="size-4 text-muted-foreground" />
                   </div>
                   <div className="text-muted-foreground">
                     Donations logged over recent period
@@ -196,7 +196,7 @@ export default function HomePage() {
                 </CardHeader>
                 <CardFooter className="flex-col items-start gap-1.5 text-sm">
                   <div className="line-clamp-1 flex gap-2 font-medium">
-                    Down 2.4% this period <HugeiconsIcon icon={TradeDownIcon} className="size-4 text-orange-500" />
+                    Down 2.4% this period <HugeiconsIcon icon={TradeDownIcon} className="size-4 text-muted-foreground" />
                   </div>
                   <div className="text-muted-foreground">
                     Active redemptions in donation log
@@ -220,7 +220,7 @@ export default function HomePage() {
                 </CardHeader>
                 <CardFooter className="flex-col items-start gap-1.5 text-sm">
                   <div className="line-clamp-1 flex gap-2 font-medium">
-                    Strong distribution rate <HugeiconsIcon icon={TradeUpIcon} className="size-4 text-green-600" />
+                    Strong distribution rate <HugeiconsIcon icon={TradeUpIcon} className="size-4 text-muted-foreground" />
                   </div>
                   <div className="text-muted-foreground">
                     Community impact exceeding targets

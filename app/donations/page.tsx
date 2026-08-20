@@ -191,7 +191,7 @@ export default function DonationsPage() {
                 </CardHeader>
                 <CardFooter className="flex-col items-start gap-1.5 text-sm">
                   <div className="line-clamp-1 flex gap-2 font-medium">
-                    Trending up this month <HugeiconsIcon icon={TradeUpIcon} strokeWidth={2} className="size-4 text-green-600" />
+                    Trending up this month <HugeiconsIcon icon={TradeUpIcon} strokeWidth={2} className="size-4 text-muted-foreground" />
                   </div>
                   <div className="text-muted-foreground">
                     Donations logged for last 30 days
@@ -214,7 +214,7 @@ export default function DonationsPage() {
                 </CardHeader>
                 <CardFooter className="flex-col items-start gap-1.5 text-sm">
                   <div className="line-clamp-1 flex gap-2 font-medium">
-                    Increased distribution volume <HugeiconsIcon icon={TradeUpIcon} strokeWidth={2} className="size-4 text-green-600" />
+                    Increased distribution volume <HugeiconsIcon icon={TradeUpIcon} strokeWidth={2} className="size-4 text-muted-foreground" />
                   </div>
                   <div className="text-muted-foreground">
                     Distribution volume exceeding targets

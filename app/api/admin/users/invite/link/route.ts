@@ -28,7 +28,7 @@ export async function POST(request: Request) {
       type: "invite",
       email: email,
       options: {
-        redirectTo: `${process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000'}/signup`
+        redirectTo: `${process.env.NEXT_PUBLIC_APP_URL || 'https://ft6-admin.vercel.app'}/signup`
       }
     });
 

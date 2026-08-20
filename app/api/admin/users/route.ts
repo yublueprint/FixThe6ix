@@ -21,7 +21,24 @@ export async function GET(request: Request) {
       ]
     });
     
-    return NextResponse.json({ users, currentUserRole: dbUser.role });
+    // Fetch avatars from Supabase Auth
+    const { createClient } = await import('@supabase/supabase-js');
+    const supabaseAdmin = createClient(
+      process.env.NEXT_PUBLIC_SUPABASE_URL!,
+      process.env.SUPABASE_SERVICE_ROLE_KEY!
+    );
+    
+    const { data: authData, error: authError } = await supabaseAdmin.auth.admin.listUsers();
+    
+    const usersWithAvatars = users.map(u => {
+      const authUser = authData?.users.find(au => au.email === u.email);
+      return {
+        ...u,
+        avatarUrl: authUser?.user_metadata?.avatar_url || null
+      };
+    });
+    
+    return NextResponse.json({ users: usersWithAvatars, currentUserRole: dbUser.role });
   } catch (error) {
     return NextResponse.json({ error: "Failed to fetch users" }, { status: 500 });
   }

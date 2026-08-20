@@ -37,6 +37,10 @@ export function NavSecondary({
   React.useEffect(() => setMounted(true), [])
 
   async function handleLogout() {
+    try {
+      localStorage.removeItem("userRole")
+      localStorage.removeItem("userData")
+    } catch {}
     await supabase.auth.signOut()
     router.push("/login")
     router.refresh()

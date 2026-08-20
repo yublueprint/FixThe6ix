@@ -72,32 +72,85 @@ const data = {
   ],
 }
 
+// In-memory module cache for client-side transitions (persists across route changes without causing SSR hydration mismatches)
+let cachedRole: string | null = null
+let cachedUser: any = null
+
 export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
-  const [user, setUser] = useState<any>(null)
-  const [role, setRole] = useState<string>("VOLUNTEER")
+  const [user, setUser] = useState<any>(cachedUser)
+  const [role, setRole] = useState<string>(cachedRole || "VOLUNTEER")
   const supabase = createClient()
 
   useEffect(() => {
+    // Read from localStorage on mount after initial hydration
+    try {
+      const storedRole = localStorage.getItem("userRole")
+      if (storedRole && storedRole !== role) {
+        cachedRole = storedRole
+        setRole(storedRole)
+      }
+      const storedUser = localStorage.getItem("userData")
+      if (storedUser && !user) {
+        const parsed = JSON.parse(storedUser)
+        cachedUser = parsed
+        setUser(parsed)
+      }
+    } catch {
+      // Ignore localStorage errors
+    }
+
     async function loadUser() {
-      const { data: { user: authUser } } = await supabase.auth.getUser()
-      if (authUser) {
-        // Fetch full role from our DB
-        fetch(`/api/users/${authUser.id}`)
-          .then(res => res.json())
-          .then(data => {
-            if (data?.user) setRole(data.user.role)
-          })
-          .catch(console.error)
-        
-        setUser({
-          ...authUser,
-          name: authUser.user_metadata?.full_name || "",
-          email: authUser.email || "",
-          avatar: authUser.user_metadata?.avatar_url || "",
-        })
+      try {
+        const { data: { user: authUser } } = await supabase.auth.getUser()
+        if (authUser) {
+          const userData = {
+            ...authUser,
+            name: authUser.user_metadata?.full_name || "",
+            email: authUser.email || "",
+            avatar: authUser.user_metadata?.avatar_url || "",
+          }
+          cachedUser = userData
+          setUser(userData)
+          try {
+            localStorage.setItem("userData", JSON.stringify(userData))
+          } catch {}
+
+          // Fetch full role from our DB
+          const res = await fetch(`/api/users/${authUser.id}`)
+          if (res.ok) {
+            const data = await res.json()
+            if (data?.user?.role) {
+              cachedRole = data.user.role
+              setRole(data.user.role)
+              try {
+                localStorage.setItem("userRole", data.user.role)
+              } catch {}
+            }
+          }
+        }
+      } catch (err) {
+        console.error("Error loading sidebar user:", err)
       }
     }
+
     loadUser()
+
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((event) => {
+      if (event === "SIGNED_OUT") {
+        cachedRole = null
+        cachedUser = null
+        setRole("VOLUNTEER")
+        setUser(null)
+        try {
+          localStorage.removeItem("userRole")
+          localStorage.removeItem("userData")
+        } catch {}
+      }
+    })
+
+    return () => {
+      subscription.unsubscribe()
+    }
   }, [])
 
   const adminNav = (role === "ADMIN" || role === "SUPER_ADMIN") ? [{
