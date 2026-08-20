@@ -33,7 +33,7 @@ export async function GET(request: NextRequest) {
       const csv = toCSV(
         stores,
         ["ID", "Name", "Category"],
-        (s) => [s.id, s.name, s.category]
+        (s: any) => [s.id, s.name, s.category]
       );
       if (requestedTables.length === 1) { csvString = csv; singleFilename = "stores.csv"; }
       else zip.addFile("stores.csv", Buffer.from(csv));
@@ -44,7 +44,7 @@ export async function GET(request: NextRequest) {
       const csv = toCSV(
         users,
         ["ID", "Name", "Email", "Role"],
-        (u) => [u.id, u.name || "", u.email || "", u.role]
+        (u: any) => [u.id, u.name || "", u.email || "", u.role]
       );
       if (requestedTables.length === 1) { csvString = csv; singleFilename = "users.csv"; }
       else zip.addFile("users.csv", Buffer.from(csv));
@@ -55,7 +55,7 @@ export async function GET(request: NextRequest) {
       const csv = toCSV(
         cards,
         ["ID", "Status", "Store", "Last 4 Digits", "Initial Amount", "Remaining Amount", "Notes", "Created At"],
-        (c) => [
+        (c: any) => [
           c.id,
           c.status,
           c.store.name,
@@ -75,7 +75,7 @@ export async function GET(request: NextRequest) {
       const csv = toCSV(
         transactions,
         ["ID", "Gift Card ID", "Type", "Amount", "Recipient Name", "Volunteer Name", "Created At"],
-        (t) => [
+        (t: any) => [
           t.id,
           t.giftCardId,
           t.type,
