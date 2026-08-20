@@ -18,7 +18,7 @@ export async function GET() {
       orderBy: { name: "asc" },
     });
 
-    const volunteers = users.map(u => ({
+    const volunteers = users.map((u: any) => ({
       id: u.id,
       name: u.name || u.email || "Unknown",
       email: u.email
