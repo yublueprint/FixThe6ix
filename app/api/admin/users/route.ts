@@ -30,8 +30,8 @@ export async function GET(request: Request) {
     
     const { data: authData, error: authError } = await supabaseAdmin.auth.admin.listUsers();
     
-    const usersWithAvatars = users.map(u => {
-      const authUser = authData?.users.find(au => au.email === u.email);
+    const usersWithAvatars = users.map((u: any) => {
+      const authUser = authData?.users.find((au: any) => au.email === u.email);
       return {
         ...u,
         avatarUrl: authUser?.user_metadata?.avatar_url || null
