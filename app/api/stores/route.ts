@@ -1,5 +1,4 @@
 import { NextResponse } from "next/server";
-import { Prisma } from "@prisma/client";
 import { prisma } from "@/lib/prisma";
 import { requireAuth } from "@/lib/auth-guard";
 import { getStores, postStore } from "./zodValidation";
@@ -31,7 +30,7 @@ export async function GET(request: Request) {
     }
 
     // Build Prisma filter: only add clauses for params the client actually sent
-    const where: Prisma.StoreWhereInput = {};
+    const where: any = {};
     if (parsed.data.name) {
       where.name = { contains: parsed.data.name, mode: "insensitive" };
     }
@@ -92,8 +91,7 @@ export async function POST(request: Request) {
     } catch (error) {
       // Duplicate name (including race: two requests creating the same name)
       if (
-        error instanceof Prisma.PrismaClientKnownRequestError &&
-        error.code === "P2002"
+        error && typeof error === 'object' && 'code' in error && (error as any).code === "P2002"
       ) {
         return NextResponse.json(
           { error: "Store with same name already exists" },
