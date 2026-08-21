@@ -23,7 +23,7 @@ import {
   CommandIcon,
   DashboardSquare01Icon,
   Archive01Icon,
-  GiveBloodIcon,
+  Task01Icon,
   Settings05Icon,
   File01Icon,
   UserMultipleIcon,
@@ -48,9 +48,9 @@ const data = {
       icon: <HugeiconsIcon icon={Archive01Icon} strokeWidth={2} />,
     },
     {
-      title: "Donations Given",
+      title: "System Logs",
       url: "/donations",
-      icon: <HugeiconsIcon icon={GiveBloodIcon} strokeWidth={2} />,
+      icon: <HugeiconsIcon icon={Task01Icon} strokeWidth={2} />,
     },
   ],
   navSecondary: [
@@ -153,7 +153,7 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
     }
   }, [])
 
-  const adminNav = (role === "ADMIN" || role === "SUPER_ADMIN") ? [{
+  const adminNav = (role === "ADMIN" || role === "SUPER_ADMIN" || role === "YUBLUEPRINT") ? [{
     title: "User Management",
     url: "/admin/users",
     icon: <HugeiconsIcon icon={UserMultipleIcon} strokeWidth={2} />,

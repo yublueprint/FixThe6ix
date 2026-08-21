@@ -73,8 +73,8 @@ export default function DangerZone({ user }: { user: any }) {
                   </DialogHeader>
                   <div className='flex flex-col-reverse gap-4 sm:flex-row sm:justify-end mt-4'>
                     <DialogClose render={<Button variant='outline'>Cancel</Button>} />
-                    <Button variant='destructive' onClick={handleDelete} disabled={loading}>
-                      {loading ? "Deleting..." : "Delete Account"}
+                    <Button variant='destructive' onClick={handleDelete} loading={loading} loadingText="Deleting...">
+                      Delete Account
                     </Button>
                   </div>
                 </DialogContent>

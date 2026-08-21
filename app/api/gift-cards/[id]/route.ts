@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { requireAuth } from "@/lib/auth-guard";
+import { logAudit } from "@/lib/audit-log";
 
 /**
  * PATCH /api/gift-cards/[id]
@@ -71,6 +72,24 @@ export async function PATCH(
       include: { store: true, transactions: true },
     });
 
+    // Audit log
+    logAudit({
+      action: "UPDATE",
+      entityType: "GIFT_CARD",
+      entityId: id,
+      performedBy: user.id,
+      performedByName: user.user_metadata?.full_name || user.email || null,
+      details: {
+        before: {
+          storeId: existing.storeId,
+          initialAmount: Number(existing.initialAmount),
+          remainingAmount: Number(existing.remainingAmount),
+          status: existing.status,
+        },
+        after: data,
+      },
+    });
+
     return NextResponse.json(updated, { status: 200 });
   } catch (error) {
     console.error("Error updating gift card:", error);
@@ -103,6 +122,22 @@ export async function DELETE(
     // Delete transactions first (FK constraint)
     await prisma.transaction.deleteMany({ where: { giftCardId: id } });
     await prisma.giftCard.delete({ where: { id } });
+
+    // Audit log
+    logAudit({
+      action: "DELETE",
+      entityType: "GIFT_CARD",
+      entityId: id,
+      performedBy: user.id,
+      performedByName: user.user_metadata?.full_name || user.email || null,
+      details: {
+        lastFourDigits: existing.lastFourDigits,
+        storeId: existing.storeId,
+        initialAmount: Number(existing.initialAmount),
+        remainingAmount: Number(existing.remainingAmount),
+        status: existing.status,
+      },
+    });
 
     return NextResponse.json({ success: true }, { status: 200 });
   } catch (error) {

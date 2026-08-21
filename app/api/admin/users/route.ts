@@ -10,11 +10,14 @@ export async function GET(request: Request) {
     const dbUser = await prisma.user.findUnique({ where: { id: user.id } });
     
     // Strict admin check
-    if (dbUser?.role !== "ADMIN" && dbUser?.role !== "SUPER_ADMIN") {
+    if (dbUser?.role !== "ADMIN" && dbUser?.role !== "SUPER_ADMIN" && dbUser?.role !== "YUBLUEPRINT") {
       return NextResponse.json({ error: "Forbidden" }, { status: 403 });
     }
 
+    const whereClause = dbUser.role === "ADMIN" ? { role: { not: "YUBLUEPRINT" as const } } : {};
+
     const users = await prisma.user.findMany({
+      where: whereClause,
       orderBy: [
         { roleRequest: 'desc' }, // Pending requests first
         { name: 'asc' }

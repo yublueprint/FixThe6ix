@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { requireAuth } from "@/lib/auth-guard";
+import { logAudit } from "@/lib/audit-log";
 
 /**
  * GET /api/transactions
@@ -73,7 +74,7 @@ export async function POST(request: Request) {
 
   try {
     const body = await request.json();
-    const { giftCardId, amount, type, volunteerName, recipientName } = body;
+    const { giftCardId, amount, type, volunteerName, recipientName, notes } = body;
 
     if (!giftCardId || !amount || !type) {
       return NextResponse.json(
@@ -119,11 +120,11 @@ export async function POST(request: Request) {
     const newRemaining = Number((currentRemaining - parsedAmount).toFixed(2));
 
     // Determine new status
-    let newStatus: "DONATED" | "FULLY_REDEEMED" | "PARTIALLY_REDEEMED"
+    let newStatus: "DONATED" | "FULLY_REDEEMED" | "ACTIVE" | "PARTIALLY_REDEEMED"
     if (newRemaining === 0) {
       newStatus = type === "DONATION_OUT" ? "DONATED" : "FULLY_REDEEMED";
     } else {
-      newStatus = "PARTIALLY_REDEEMED";
+      newStatus = "ACTIVE";
     }
 
     // Create transaction and update card in a transaction
@@ -135,6 +136,7 @@ export async function POST(request: Request) {
           type,
           volunteerName: volunteerName || null,
           recipientName: recipientName || null,
+          notes: notes?.trim() || null,
         },
         include: {
           giftCard: { include: { store: true } },
@@ -148,6 +150,26 @@ export async function POST(request: Request) {
         },
       }),
     ]);
+
+    // Audit log
+    logAudit({
+      action: "CREATE",
+      entityType: "TRANSACTION",
+      entityId: transaction.id,
+      performedBy: user.id,
+      performedByName: user.user_metadata?.full_name || user.email || null,
+      details: {
+        type,
+        amount: parsedAmount,
+        giftCardId,
+        storeName: transaction.giftCard?.store?.name,
+        volunteerName: volunteerName || null,
+        recipientName: recipientName || null,
+        notes: notes?.trim() || null,
+        previousBalance: currentRemaining,
+        newBalance: newRemaining,
+      },
+    });
 
     return NextResponse.json(transaction, { status: 201 });
   } catch (error) {

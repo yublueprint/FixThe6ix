@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { requireAuth } from "@/lib/auth-guard";
+import { logAudit } from "@/lib/audit-log";
 
 /**
  * GET /api/gift-cards
@@ -131,6 +132,21 @@ export async function POST(request: Request) {
         addedBy: resolvedAddedBy,
       },
       include: { store: true, transactions: true },
+    });
+
+    // Audit log
+    logAudit({
+      action: "CREATE",
+      entityType: "GIFT_CARD",
+      entityId: card.id,
+      performedBy: user.id,
+      performedByName: user.user_metadata?.full_name || user.email || null,
+      details: {
+        storeName: card.store?.name,
+        lastFourDigits: card.lastFourDigits,
+        initialAmount: Number(card.initialAmount),
+        addedBy: card.addedBy,
+      },
     });
 
     return NextResponse.json(card, { status: 201 });

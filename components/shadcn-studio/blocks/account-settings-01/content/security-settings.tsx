@@ -243,8 +243,8 @@ export default function SecuritySettings({ user }: { user: any }) {
           </div>
 
           <div className='mt-6 flex justify-end'>
-            <Button type='submit' className='max-sm:w-full' disabled={loading || !password || !currentPassword}>
-              {loading ? "Saving..." : "Update Password"}
+            <Button type='submit' className='max-sm:w-full' loading={loading} loadingText="Saving..." disabled={!password || !currentPassword}>
+              Update Password
             </Button>
           </div>
         </form>

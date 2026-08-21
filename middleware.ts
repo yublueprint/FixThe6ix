@@ -54,7 +54,7 @@ export async function middleware(request: NextRequest) {
   // We'll skip strict admin enforcement in middleware for now unless user metadata has it.
   const isAdminOnly = ADMIN_ONLY.some((r) => pathname.startsWith(r));
   const userRole = claims.claims?.user_metadata?.role;
-  if (isAdminOnly && userRole !== "ADMIN" && userRole !== "SUPER_ADMIN") {
+  if (isAdminOnly && userRole && userRole !== "ADMIN" && userRole !== "SUPER_ADMIN" && userRole !== "YUBLUEPRINT") {
     return NextResponse.redirect(new URL("/dashboard", request.nextUrl));
   }
 

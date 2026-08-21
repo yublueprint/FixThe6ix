@@ -126,8 +126,8 @@ export function LoginForm({
                 <p className="text-sm text-red-500">{error}</p>
               )}
               <Field>
-                <Button type="submit" disabled={loading}>
-                  {loading ? "Logging in…" : "Login"}
+                <Button type="submit" loading={loading} loadingText="Logging in…">
+                  Login
                 </Button>
               </Field>
 
@@ -145,10 +145,11 @@ export function LoginForm({
                 variant="outline"
                 className="w-full"
                 onClick={handlePasskeySignIn}
-                disabled={passkeyLoading}
+                loading={passkeyLoading}
+                loadingText="Waiting for device…"
               >
                 <HugeiconsIcon icon={FingerPrintIcon} strokeWidth={2} className="size-4 mr-2" />
-                {passkeyLoading ? "Waiting for device…" : "Sign in with Passkey"}
+                Sign in with Passkey
               </Button>
 
               <p className="text-center text-sm text-muted-foreground">

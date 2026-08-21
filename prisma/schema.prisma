@@ -37,6 +37,7 @@ model Transaction {
   type          TransactionType
   recipientName String?
   volunteerName String?
+  notes         String?
   createdAt     DateTime        @default(now())
   giftCard      GiftCard        @relation(fields: [giftCardId], references: [id])
 }
@@ -161,6 +162,7 @@ enum TransactionType {
 }
 
 enum UserRole {
+  YUBLUEPRINT
   SUPER_ADMIN
   ADMIN
   VOLUNTEER
@@ -169,4 +171,34 @@ enum UserRole {
 enum UserStatus {
   INVITED
   ACTIVE
+}
+
+model AuditLog {
+  id              String          @id @default(uuid())
+  action          AuditAction
+  entityType      AuditEntityType
+  entityId        String?
+  performedBy     String?
+  performedByName String?
+  details         Json?
+  createdAt       DateTime        @default(now())
+
+  @@index([entityType])
+  @@index([action])
+  @@index([createdAt])
+  @@index([performedBy])
+}
+
+enum AuditAction {
+  CREATE
+  UPDATE
+  DELETE
+}
+
+enum AuditEntityType {
+  GIFT_CARD
+  USER
+  STORE
+  TRANSACTION
+  IMPORT
 }

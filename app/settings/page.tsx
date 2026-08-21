@@ -1,7 +1,8 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { AppSidebar } from "@/components/app-sidebar";
+import { AppSidebar } from "@/components/app-sidebar"
+import { SiteHeader } from "@/components/site-header";
 import { SidebarInset, SidebarProvider, SidebarTrigger } from "@/components/ui/sidebar";
 
 import UserGeneral from '@/components/shadcn-studio/blocks/account-settings-01/account-settings-01';
@@ -31,10 +32,7 @@ export default function SettingsPage() {
     <SidebarProvider>
       <AppSidebar variant="inset" />
       <SidebarInset>
-        <header className="flex h-14 shrink-0 items-center gap-2 border-b px-4 bg-background">
-          <SidebarTrigger className="-ml-1" />
-          <h1 className="text-lg font-semibold">Account Settings</h1>
-        </header>
+        <SiteHeader title="Account Settings" />
 
         <main className="flex-1 bg-background">
           <div className='w-full py-8'>

@@ -106,24 +106,23 @@ export default function PersonalInfo({ user, role, roleRequest, onRefresh }: { u
 
     let avatarUrl = user?.user_metadata?.avatar_url;
     
-    if (file) {
+    if (file && user?.id) {
       try {
         const resizedBlob = await resizeImage(file);
-        const fileName = `${user?.id}-${Date.now()}.jpg`;
-        const { error: uploadError } = await supabase.storage
-          .from('avatars')
-          .upload(fileName, resizedBlob, {
-            contentType: 'image/jpeg',
-            upsert: true
-          });
-          
-        if (uploadError) throw uploadError;
-        
-        const { data: publicUrlData } = supabase.storage
-          .from('avatars')
-          .getPublicUrl(fileName);
-          
-        avatarUrl = publicUrlData.publicUrl;
+        const formData = new FormData();
+        formData.append("file", resizedBlob, `${user.id}.jpg`);
+
+        const uploadRes = await fetch(`/api/users/${user.id}`, {
+          method: "POST",
+          body: formData,
+        });
+
+        const uploadData = await uploadRes.json();
+        if (!uploadRes.ok) {
+          throw new Error(uploadData.error || "Failed to upload image");
+        }
+
+        avatarUrl = uploadData.avatarUrl;
       } catch (err: any) {
         toast.error("Failed to upload avatar: " + err.message);
         setLoading(false);
@@ -247,8 +246,8 @@ export default function PersonalInfo({ user, role, roleRequest, onRefresh }: { u
           </div>
           
           <div className='flex justify-end mt-6'>
-            <Button type='submit' className='max-sm:w-full' disabled={loading}>
-              {loading ? "Saving..." : "Save Changes"}
+            <Button type='submit' className='max-sm:w-full' loading={loading} loadingText="Saving...">
+              Save Changes
             </Button>
           </div>
         </form>

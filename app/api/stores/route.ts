@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { requireAuth } from "@/lib/auth-guard";
+import { logAudit } from "@/lib/audit-log";
 import { getStores, postStore } from "./zodValidation";
 
 /**

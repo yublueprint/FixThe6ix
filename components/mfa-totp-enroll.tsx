@@ -190,8 +190,8 @@ export function MFATotpEnroll({ onComplete, onSkip, showSkip = true }: Props) {
             >
               Cancel
             </Button>
-            <Button type="submit" size="sm" className="flex-1" disabled={loading || verifyCode.length !== 6}>
-              {loading ? "Verifying…" : "Verify & Enable"}
+            <Button type="submit" size="sm" className="flex-1" loading={loading} loadingText="Verifying…" disabled={verifyCode.length !== 6}>
+              Verify & Enable
             </Button>
           </div>
         </form>

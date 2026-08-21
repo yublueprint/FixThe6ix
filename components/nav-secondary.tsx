@@ -5,9 +5,6 @@ import Link from "next/link"
 import { usePathname, useRouter } from "next/navigation"
 import { ExportDialog } from "@/components/export-dialog"
 import { createClient } from "@/lib/supabase/client"
-import { useTheme } from "next-themes"
-import { HugeiconsIcon } from "@hugeicons/react"
-import { Moon02Icon, Sun01Icon, LaptopProgrammingIcon } from "@hugeicons/core-free-icons"
 
 import {
   SidebarGroup,
@@ -31,10 +28,6 @@ export function NavSecondary({
   const router = useRouter()
   const [exportOpen, setExportOpen] = React.useState(false)
   const supabase = createClient()
-  const { theme, setTheme } = useTheme()
-  const [mounted, setMounted] = React.useState(false)
-
-  React.useEffect(() => setMounted(true), [])
 
   async function handleLogout() {
     try {
@@ -51,47 +44,6 @@ export function NavSecondary({
       <SidebarGroup {...props}>
       <SidebarGroupContent>
         <SidebarMenu>
-          <SidebarMenuItem>
-            {mounted ? (
-              <SidebarMenuButton
-                className="flex items-center justify-between gap-2 w-full"
-                render={<div />}
-              >
-                <div className="flex items-center gap-2">
-                  {theme === "dark" ? (
-                     <HugeiconsIcon icon={Moon02Icon} strokeWidth={2} className="size-4" />
-                  ) : theme === "light" ? (
-                     <HugeiconsIcon icon={Sun01Icon} strokeWidth={2} className="size-4" />
-                  ) : (
-                     <HugeiconsIcon icon={LaptopProgrammingIcon} strokeWidth={2} className="size-4" />
-                  )}
-                  <span>Theme</span>
-                </div>
-                <div className="flex bg-muted rounded-full p-0.5">
-                   <button onClick={(e) => { e.preventDefault(); setTheme("light") }} className={`rounded-full p-1 ${theme === "light" ? "bg-background shadow-sm text-primary" : "text-muted-foreground hover:text-foreground"}`}>
-                     <HugeiconsIcon icon={Sun01Icon} strokeWidth={2} className="size-3" />
-                   </button>
-                   <button onClick={(e) => { e.preventDefault(); setTheme("dark") }} className={`rounded-full p-1 ${theme === "dark" ? "bg-background shadow-sm text-primary" : "text-muted-foreground hover:text-foreground"}`}>
-                     <HugeiconsIcon icon={Moon02Icon} strokeWidth={2} className="size-3" />
-                   </button>
-                   <button onClick={(e) => { e.preventDefault(); setTheme("system") }} className={`rounded-full p-1 ${theme === "system" ? "bg-background shadow-sm text-primary" : "text-muted-foreground hover:text-foreground"}`}>
-                     <HugeiconsIcon icon={LaptopProgrammingIcon} strokeWidth={2} className="size-3" />
-                   </button>
-                </div>
-              </SidebarMenuButton>
-            ) : (
-              <SidebarMenuButton 
-                className="flex items-center justify-between gap-2 w-full opacity-50"
-                render={<div />}
-              >
-                <div className="flex items-center gap-2">
-                  <HugeiconsIcon icon={LaptopProgrammingIcon} strokeWidth={2} className="size-4" />
-                  <span>Theme</span>
-                </div>
-              </SidebarMenuButton>
-            )}
-          </SidebarMenuItem>
-          
           {items.map((item) => {
             const isActive = pathname === item.url
             if (item.url === "#export") {

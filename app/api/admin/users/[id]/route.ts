@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { requireAuth } from "@/lib/auth-guard";
+import { logAudit } from "@/lib/audit-log";
 import { createClient } from '@supabase/supabase-js';
 
 export async function PATCH(
@@ -13,7 +14,7 @@ export async function PATCH(
   try {
     const dbUser = await prisma.user.findUnique({ where: { id: user.id } });
     
-    if (dbUser?.role !== "ADMIN" && dbUser?.role !== "SUPER_ADMIN") {
+    if (dbUser?.role !== "ADMIN" && dbUser?.role !== "SUPER_ADMIN" && dbUser?.role !== "YUBLUEPRINT") {
       return NextResponse.json({ error: "Forbidden" }, { status: 403 });
     }
 
@@ -25,16 +26,16 @@ export async function PATCH(
       return NextResponse.json({ error: "User not found" }, { status: 404 });
     }
 
-    // Admins cannot edit other Admins or Super Admins
-    if (dbUser.role === "ADMIN" && (targetUser.role === "ADMIN" || targetUser.role === "SUPER_ADMIN")) {
+    // Admins cannot edit other Admins, Super Admins, or YUBlueprint users
+    if (dbUser.role === "ADMIN" && (targetUser.role === "ADMIN" || targetUser.role === "SUPER_ADMIN" || targetUser.role === "YUBLUEPRINT")) {
       return NextResponse.json({ error: "Forbidden: Admins cannot edit other Admins" }, { status: 403 });
     }
 
     const { role, email, name, image } = await request.json();
 
-    // Admins cannot grant ADMIN or SUPER_ADMIN roles
-    if (dbUser.role === "ADMIN" && role && (role === "ADMIN" || role === "SUPER_ADMIN")) {
-      return NextResponse.json({ error: "Forbidden: Admins cannot grant ADMIN or SUPER_ADMIN roles" }, { status: 403 });
+    // Admins cannot grant ADMIN, SUPER_ADMIN, or YUBLUEPRINT roles
+    if (dbUser.role === "ADMIN" && role && (role === "ADMIN" || role === "SUPER_ADMIN" || role === "YUBLUEPRINT")) {
+      return NextResponse.json({ error: "Forbidden: Admins cannot grant elevated roles" }, { status: 403 });
     }
 
     const dataToUpdate: any = {};
@@ -79,6 +80,20 @@ export async function PATCH(
       `;
     }
 
+    // Audit log
+    logAudit({
+      action: "UPDATE",
+      entityType: "USER",
+      entityId: id,
+      performedBy: user.id,
+      performedByName: user.user_metadata?.full_name || user.email || null,
+      details: {
+        targetUserName: targetUser.name || targetUser.email,
+        before: { role: targetUser.role, name: targetUser.name, email: targetUser.email },
+        after: dataToUpdate,
+      },
+    });
+
     return NextResponse.json({ success: true });
   } catch (error) {
     return NextResponse.json({ error: "Failed to update user" }, { status: 500 });
@@ -94,8 +109,8 @@ export async function DELETE(
 
   try {
     const dbUser = await prisma.user.findUnique({ where: { id: user.id } });
-    if (dbUser?.role !== "ADMIN" && dbUser?.role !== "SUPER_ADMIN") {
-      return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+    if (dbUser?.role !== "SUPER_ADMIN" && dbUser?.role !== "YUBLUEPRINT") {
+      return NextResponse.json({ error: "Forbidden: Only Super Admins and YUBlueprint can delete users" }, { status: 403 });
     }
 
     const { id } = await params;
@@ -103,10 +118,6 @@ export async function DELETE(
     const targetUser = await prisma.user.findUnique({ where: { id } });
     if (!targetUser) {
       return NextResponse.json({ error: "User not found" }, { status: 404 });
-    }
-
-    if (dbUser.role === "ADMIN" && (targetUser.role === "ADMIN" || targetUser.role === "SUPER_ADMIN")) {
-      return NextResponse.json({ error: "Forbidden: Admins cannot delete other Admins" }, { status: 403 });
     }
 
     // Delete from Supabase Auth (this will cascade or we can manually delete from Prisma if no cascade is set)
@@ -119,6 +130,20 @@ export async function DELETE(
 
     // Delete from Prisma (in case trigger or cascade doesn't cover it)
     await prisma.user.delete({ where: { id } }).catch(() => {});
+
+    // Audit log
+    logAudit({
+      action: "DELETE",
+      entityType: "USER",
+      entityId: id,
+      performedBy: user.id,
+      performedByName: user.user_metadata?.full_name || user.email || null,
+      details: {
+        deletedUserName: targetUser.name || targetUser.email,
+        deletedUserRole: targetUser.role,
+        deletedUserEmail: targetUser.email,
+      },
+    });
 
     return NextResponse.json({ success: true });
   } catch (error: any) {

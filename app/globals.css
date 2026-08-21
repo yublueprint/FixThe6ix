@@ -134,6 +134,7 @@
   --foreground: oklch(1 0 0);
   --card: oklch(0.2103 0 267.5100);
   --card-foreground: oklch(0.9461 0 0);
+
   --popover: oklch(0.2103 0 267.5100);
   --popover-foreground: oklch(1 0 0);
   --primary: oklch(0.5144 0.1605 267.4400);
@@ -178,10 +179,6 @@
   --shadow-xs: 0.25px 1px 3px 0px hsl(236.5829 64.2250% 21.4383% / 0.07);
   --shadow-sm: 0.25px 1px 3px 0px hsl(236.5829 64.2250% 21.4383% / 0.15), 0.25px 1px 2px -1px hsl(236.5829 64.2250% 21.4383% / 0.15);
   --shadow: 0.25px 1px 3px 0px hsl(236.5829 64.2250% 21.4383% / 0.15), 0.25px 1px 2px -1px hsl(236.5829 64.2250% 21.4383% / 0.15);
-  --shadow-md: 0.25px 1px 3px 0px hsl(236.5829 64.2250% 21.4383% / 0.15), 0.25px 2px 4px -1px hsl(236.5829 64.2250% 21.4383% / 0.15);
-  --shadow-lg: 0.25px 1px 3px 0px hsl(236.5829 64.2250% 21.4383% / 0.15), 0.25px 4px 6px -1px hsl(236.5829 64.2250% 21.4383% / 0.15);
-  --shadow-xl: 0.25px 1px 3px 0px hsl(236.5829 64.2250% 21.4383% / 0.15), 0.25px 8px 10px -1px hsl(236.5829 64.2250% 21.4383% / 0.15);
-  --shadow-2xl: 0.25px 1px 3px 0px hsl(236.5829 64.2250% 21.4383% / 0.38);
 }
 
 @layer base {
@@ -194,5 +191,17 @@
   }
   h1, h2, h3, h4, h5, h6 {
     font-family: var(--font-heading);
+  }
+  table {
+    @apply bg-background;
+  }
+  thead, [data-slot="table-header"] {
+    @apply bg-muted/50 dark:bg-sidebar;
+  }
+  tbody, [data-slot="table-body"] {
+    @apply bg-background;
+  }
+  th, [data-slot="table-head"] {
+    @apply text-muted-foreground;
   }
 }

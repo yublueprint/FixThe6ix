@@ -101,8 +101,8 @@ export function MFAChallenge({ onSuccess }: Props) {
 
           {error && <p className="text-sm text-red-500">{error}</p>}
 
-          <Button type="submit" className="w-full" disabled={loading || verifyCode.length !== 6}>
-            {loading ? "Verifying…" : "Verify"}
+          <Button type="submit" className="w-full" loading={loading} loadingText="Verifying…" disabled={verifyCode.length !== 6}>
+            Verify
           </Button>
         </form>
       </CardContent>

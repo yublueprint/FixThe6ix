@@ -334,8 +334,8 @@ export function SignupForm({ ...props }: React.ComponentProps<typeof Card>) {
               <p className="text-sm text-green-600">{notice}</p>
             )}
             <Field>
-              <Button type="submit" disabled={loading}>
-                {loading ? "Completing setup…" : "Complete Setup"}
+              <Button type="submit" loading={loading} loadingText="Completing setup…">
+                Complete Setup
               </Button>
             </Field>
           </FieldGroup>

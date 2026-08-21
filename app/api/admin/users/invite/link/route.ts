@@ -9,7 +9,7 @@ export async function POST(request: Request) {
 
   try {
     const dbUser = await prisma.user.findUnique({ where: { id: user.id } });
-    if (dbUser?.role !== "ADMIN" && dbUser?.role !== "SUPER_ADMIN") {
+    if (dbUser?.role !== "ADMIN" && dbUser?.role !== "SUPER_ADMIN" && dbUser?.role !== "YUBLUEPRINT") {
       return NextResponse.json({ error: "Forbidden" }, { status: 403 });
     }
 
