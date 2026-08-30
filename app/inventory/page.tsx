@@ -668,7 +668,7 @@ export default function InventoryPage() {
           <div className="flex flex-col gap-6 p-4 sm:p-6">
 
             {/* ── Stats with Real Database Analysis ── */}
-            <div className="*:data-[slot=card]:from-primary/5 *:data-[slot=card]:to-card dark:*:data-[slot=card]:bg-card *:data-[slot=card]:bg-gradient-to-t *:data-[slot=card]:shadow-xs grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
+            <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
               {(() => {
                 const now = Date.now()
                 const periodMs = 30 * 24 * 60 * 60 * 1000
@@ -769,29 +769,29 @@ export default function InventoryPage() {
                 ]
 
                 return stats.map(s => (
-                  <Card key={s.label} className="@container/card">
+                  <Card key={s.label} className="@container/card border border-zinc-700 bg-[#111111] text-white shadow-sm">
                     <CardHeader>
-                      <CardDescription>{s.label}</CardDescription>
-                      <CardTitle className="text-2xl font-semibold tabular-nums @[250px]/card:text-3xl">
-                        {loading ? <Skeleton className="h-8 w-24" /> : s.value}
+                      <CardDescription className="text-zinc-300">{s.label}</CardDescription>
+                      <CardTitle className="text-2xl font-semibold tabular-nums text-white @[250px]/card:text-3xl">
+                        {loading ? <Skeleton className="h-8 w-24 bg-zinc-700" /> : s.value}
                       </CardTitle>
                       {s.badge && (
                         <CardAction>
-                          <Badge variant="outline">
+                          <Badge variant="outline" className="border-zinc-600 bg-zinc-800 text-zinc-100">
                             <HugeiconsIcon icon={s.isUp ? TradeUpIcon : TradeDownIcon} strokeWidth={2} className="mr-1 size-3" />
                             {s.badge}
                           </Badge>
                         </CardAction>
                       )}
                     </CardHeader>
-                    <CardFooter className="flex-col items-start gap-1.5 text-sm">
-                      <div className="line-clamp-1 flex items-center gap-2 font-medium">
+                    <CardFooter className="flex-col items-start gap-1.5 text-sm text-zinc-200">
+                      <div className="line-clamp-1 flex items-center gap-2 font-medium text-white">
                         {s.heading}
                         {s.hasData && (
-                          <HugeiconsIcon icon={s.isUp ? TradeUpIcon : TradeDownIcon} strokeWidth={2} className="size-4 text-muted-foreground" />
+                          <HugeiconsIcon icon={s.isUp ? TradeUpIcon : TradeDownIcon} strokeWidth={2} className="size-4 text-zinc-300" />
                         )}
                       </div>
-                      <div className="text-muted-foreground">
+                      <div className="text-zinc-300">
                         {s.sub}
                       </div>
                     </CardFooter>
