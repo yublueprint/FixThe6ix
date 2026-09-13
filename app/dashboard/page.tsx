@@ -328,89 +328,89 @@ export default function HomePage() {
 
 
             {/* ── Summary ── */}
-            <div className="*:data-[slot=card]:from-primary/5 *:data-[slot=card]:to-card dark:*:data-[slot=card]:bg-card *:data-[slot=card]:bg-gradient-to-t *:data-[slot=card]:shadow-xs grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
+            <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
               {/* Total Cards */}
-              <Card className="@container/card">
+              <Card className="@container/card border border-zinc-700 bg-[#111111] text-white shadow-sm">
                 <CardHeader>
-                  <CardDescription>Total Cards</CardDescription>
-                  <CardTitle className="text-2xl font-semibold tabular-nums @[250px]/card:text-3xl">
-                    {isLoading ? <Skeleton className="h-8 w-16" /> : totalCards}
+                  <CardDescription className="text-zinc-300">Total Cards</CardDescription>
+                  <CardTitle className="text-2xl font-semibold tabular-nums text-white @[250px]/card:text-3xl">
+                    {isLoading ? <Skeleton className="h-8 w-16 bg-zinc-700" /> : totalCards}
                   </CardTitle>
                   {statsAnalysis.cardBadge && (
                     <CardAction>
-                      <Badge variant="outline">
+                      <Badge variant="outline" className="border-zinc-600 bg-zinc-800 text-zinc-100">
                         <HugeiconsIcon icon={statsAnalysis.cardIsUp ? TradeUpIcon : TradeDownIcon} className="mr-1 size-3" />
                         {statsAnalysis.cardBadge}
                       </Badge>
                     </CardAction>
                   )}
                 </CardHeader>
-                <CardFooter className="flex-col items-start gap-1.5 text-sm">
-                  <div className="line-clamp-1 flex items-center gap-2 font-medium">
+                <CardFooter className="flex-col items-start gap-1.5 text-sm text-zinc-200">
+                  <div className="line-clamp-1 flex items-center gap-2 font-medium text-white">
                     {statsAnalysis.cardHeading}
                     {statsAnalysis.hasCardData && (
-                      <HugeiconsIcon icon={statsAnalysis.cardIsUp ? TradeUpIcon : TradeDownIcon} className="size-4 text-muted-foreground" />
+                      <HugeiconsIcon icon={statsAnalysis.cardIsUp ? TradeUpIcon : TradeDownIcon} className="size-4 text-zinc-300" />
                     )}
                   </div>
-                  <div className="text-muted-foreground">
+                  <div className="text-zinc-300">
                     {statsAnalysis.cardSub}
                   </div>
                 </CardFooter>
               </Card>
 
               {/* Remaining Value */}
-              <Card className="@container/card">
+              <Card className="@container/card border border-zinc-700 bg-[#111111] text-white shadow-sm">
                 <CardHeader>
-                  <CardDescription>Remaining Value</CardDescription>
-                  <CardTitle className="text-2xl font-semibold tabular-nums @[250px]/card:text-3xl">
-                    {isLoading ? <Skeleton className="h-8 w-24" /> : `$${totalRemaining.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`}
+                  <CardDescription className="text-zinc-300">Remaining Value</CardDescription>
+                  <CardTitle className="text-2xl font-semibold tabular-nums text-white @[250px]/card:text-3xl">
+                    {isLoading ? <Skeleton className="h-8 w-24 bg-zinc-700" /> : `$${totalRemaining.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`}
                   </CardTitle>
                   {statsAnalysis.remBadge && (
                     <CardAction>
-                      <Badge variant="outline">
+                      <Badge variant="outline" className="border-zinc-600 bg-zinc-800 text-zinc-100">
                         <HugeiconsIcon icon={statsAnalysis.remIsUp ? TradeUpIcon : TradeDownIcon} className="mr-1 size-3" />
                         {statsAnalysis.remBadge}
                       </Badge>
                     </CardAction>
                   )}
                 </CardHeader>
-                <CardFooter className="flex-col items-start gap-1.5 text-sm">
-                  <div className="line-clamp-1 flex items-center gap-2 font-medium">
+                <CardFooter className="flex-col items-start gap-1.5 text-sm text-zinc-200">
+                  <div className="line-clamp-1 flex items-center gap-2 font-medium text-white">
                     {statsAnalysis.remHeading}
                     {statsAnalysis.hasRemData && (
-                      <HugeiconsIcon icon={statsAnalysis.remIsUp ? TradeUpIcon : TradeDownIcon} className="size-4 text-muted-foreground" />
+                      <HugeiconsIcon icon={statsAnalysis.remIsUp ? TradeUpIcon : TradeDownIcon} className="size-4 text-zinc-300" />
                     )}
                   </div>
-                  <div className="text-muted-foreground">
+                  <div className="text-zinc-300">
                     {statsAnalysis.remSub}
                   </div>
                 </CardFooter>
               </Card>
 
               {/* Total Redeemed */}
-              <Card className="@container/card">
+              <Card className="@container/card border border-zinc-700 bg-[#111111] text-white shadow-sm">
                 <CardHeader>
-                  <CardDescription>Total Redeemed</CardDescription>
-                  <CardTitle className="text-2xl font-semibold tabular-nums @[250px]/card:text-3xl">
-                    {isLoading ? <Skeleton className="h-8 w-24" /> : `$${totalRedeemed.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`}
+                  <CardDescription className="text-zinc-300">Total Redeemed</CardDescription>
+                  <CardTitle className="text-2xl font-semibold tabular-nums text-white @[250px]/card:text-3xl">
+                    {isLoading ? <Skeleton className="h-8 w-24 bg-zinc-700" /> : `$${totalRedeemed.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`}
                   </CardTitle>
                   {statsAnalysis.spentBadge && (
                     <CardAction>
-                      <Badge variant="outline">
+                      <Badge variant="outline" className="border-zinc-600 bg-zinc-800 text-zinc-100">
                         <HugeiconsIcon icon={statsAnalysis.spentIsUp ? TradeUpIcon : TradeDownIcon} className="mr-1 size-3" />
                         {statsAnalysis.spentBadge}
                       </Badge>
                     </CardAction>
                   )}
                 </CardHeader>
-                <CardFooter className="flex-col items-start gap-1.5 text-sm">
-                  <div className="line-clamp-1 flex items-center gap-2 font-medium">
+                <CardFooter className="flex-col items-start gap-1.5 text-sm text-zinc-200">
+                  <div className="line-clamp-1 flex items-center gap-2 font-medium text-white">
                     {statsAnalysis.spentHeading}
                     {statsAnalysis.hasSpentData && (
-                      <HugeiconsIcon icon={statsAnalysis.spentIsUp ? TradeUpIcon : TradeDownIcon} className="size-4 text-muted-foreground" />
+                      <HugeiconsIcon icon={statsAnalysis.spentIsUp ? TradeUpIcon : TradeDownIcon} className="size-4 text-zinc-300" />
                     )}
                   </div>
-                  <div className="text-muted-foreground">
+                  <div className="text-zinc-300">
                     {statsAnalysis.spentSub}
                   </div>
                 </CardFooter>

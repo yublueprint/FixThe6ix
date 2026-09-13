@@ -23,9 +23,9 @@ export function ModeToggle({ variant = "outline", className }: ModeToggleProps) 
       <Button
         variant={variant}
         size="icon"
-        className="size-8 cursor-pointer relative overflow-hidden rounded-md border border-input bg-background shadow-xs hover:bg-accent hover:text-accent-foreground"
+        className="size-8 cursor-pointer relative overflow-hidden rounded-md border border-input bg-card text-card-foreground shadow-xs transition-colors hover:bg-secondary hover:text-foreground"
       >
-        <Moon className="size-4 rotate-0 scale-100 text-muted-foreground" />
+        <Moon className="size-4 rotate-0 scale-100 text-card-foreground/80" />
         <span className="sr-only">Toggle theme</span>
       </Button>
     )
@@ -42,12 +42,12 @@ export function ModeToggle({ variant = "outline", className }: ModeToggleProps) 
       variant={variant}
       size="icon"
       onClick={handleToggle}
-      className="size-8 cursor-pointer relative overflow-hidden rounded-md border border-input bg-background shadow-xs hover:bg-accent hover:text-accent-foreground"
+      className="size-8 cursor-pointer relative overflow-hidden rounded-md border border-input bg-card text-card-foreground shadow-xs transition-colors hover:bg-secondary hover:text-foreground"
     >
       {isDarkMode ? (
-        <Sun className="size-4 transition-transform duration-300 rotate-0 scale-100 text-foreground" />
+        <Sun className="size-4 transition-transform duration-300 rotate-0 scale-100 text-card-foreground" />
       ) : (
-        <Moon className="size-4 transition-transform duration-300 rotate-0 scale-100 text-foreground" />
+        <Moon className="size-4 transition-transform duration-300 rotate-0 scale-100 text-card-foreground" />
       )}
       <span className="sr-only">
         Switch to {isDarkMode ? "light" : "dark"} mode
